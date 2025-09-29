@@ -335,13 +335,13 @@ fun ImageRender(
                         )
 
                         ImageInfo(
-                            stringResource(R.string.size),
-                            stringResource(R.string.kb, size / 1000)
+                            stringResource(R.string.sms_est),
+                            smsCount.toString()
                         )
 
                         ImageInfo(
-                            stringResource(R.string.sms_est),
-                            smsCount.toString()
+                            stringResource(R.string.size),
+                            stringResource(R.string.kb, size / 1000)
                         )
                     }
                 }
