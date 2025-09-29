@@ -10,4 +10,8 @@
     <string name="apply">Apply</string>
     <string name="size">Size</string>
     <string name="edit_image">Edit image</string>
+    <string name="width">Width</string>
+    <string name="height">Height</string>
+    <string name="kb">%1$d KB</string>
+    <string name="sms_est">SMS Est.</string>
 </resources>

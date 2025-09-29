@@ -5,9 +5,11 @@ import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -35,6 +37,16 @@ class ImageViewModel: ViewModel() {
     private var _resizeRatio = MutableStateFlow<Int>(1)
     val resizeRatio = _resizeRatio.asStateFlow()
 
+    fun reset() {
+        _compressionRatio.value = 100
+        _resizeRatio.value = 1
+        _processedImage.value = null
+    }
+
+    fun initialize() {
+        _processedImage.value = compressImage(originalBitmap!!)
+    }
+
     fun setResizeRatio(value: Int) {
         _resizeRatio.value = value
         _processedImage.value = compressImage(originalBitmap!!)
@@ -45,7 +57,7 @@ class ImageViewModel: ViewModel() {
         _processedImage.value = compressImage(originalBitmap!!)
     }
 
-    fun compressImage(
+    private fun compressImage(
         bitmap: Bitmap,
         compressFormat: CompressFormat =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)

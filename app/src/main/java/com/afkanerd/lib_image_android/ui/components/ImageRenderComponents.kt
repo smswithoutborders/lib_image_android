@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +25,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -48,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -66,6 +71,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -73,11 +79,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
+import com.afkanerd.lib_image_android.ui.ImageMainView
 import com.afkanerd.lib_image_android.ui.theme.Lib_image_androidTheme
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.intellij.lang.annotations.JdkConstants
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -87,22 +96,40 @@ fun ImageRender(
     imageViewModel: ImageViewModel
 ) {
     val context = LocalContext.current
+    val inPreviewMode = LocalInspectionMode.current
 
     val processedImage by imageViewModel.processedImage.collectAsState()
     val compressionRatio by imageViewModel.compressionRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
 
+    var compressionSliderPosition by remember { mutableFloatStateOf(0f) }
+    var resizeSliderPosition by remember { mutableFloatStateOf(0f) }
+
+    var smsCount by remember{ mutableIntStateOf(0) }
+    var size by remember{ mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        imageViewModel.initialize()
+    }
+
     fun getSmsCount(): Int {
+        if(processedImage == null)
+            return 0
+
+        val subId = SmsManager.getDefaultSmsSubscriptionId()
         return (if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context
             .getSystemService(SmsManager::class.java)
-            .createForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId()) else
-            SmsManager.getSmsManagerForSubscriptionId(SmsManager
-                .getDefaultSmsSubscriptionId()))
-            .divideMessage(Base64
-                .encodeToString(processedImage!!.rawBytes,
-                    Base64.DEFAULT)).size
+            .createForSubscriptionId(subId) else
+            SmsManager.getSmsManagerForSubscriptionId(subId))
+            .divideMessage(Base64.encodeToString(processedImage!!.rawBytes,
+                Base64.DEFAULT)).size
     }
-//    var smsCount by remember{ mutableIntStateOf(getSmsCount()) }
+
+    LaunchedEffect(processedImage) {
+        smsCount = getSmsCount()
+        size = processedImage?.rawBytes?.size ?: 0
+    }
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -112,7 +139,9 @@ fun ImageRender(
                     Modifier.padding(16.dp)
                 ) {
                     FilledTonalButton(onClick = {
-
+                        imageViewModel.reset()
+                        compressionSliderPosition = 0f
+                        resizeSliderPosition = 0f
                     }, modifier = Modifier.weight(1f),) {
                         Text(
                             stringResource(R.string.reset),
@@ -123,9 +152,10 @@ fun ImageRender(
 
                     Spacer(Modifier.width(8.dp))
 
-                    Button(onClick = {
-
-                    }, modifier = Modifier.weight(1f)) {
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
                             stringResource(R.string.apply),
                             modifier = Modifier.padding(8.dp),
@@ -156,7 +186,9 @@ fun ImageRender(
             .fillMaxSize()
             .padding(innerPadding)) {
             Column(
-                Modifier.padding(8.dp)
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(8.dp),
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -206,7 +238,10 @@ fun ImageRender(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        SliderImplementation {
+                        SliderImplementation(
+                            compressionSliderPosition,
+                            sliderChangedCallback = { compressionSliderPosition = it }
+                        ) {
                             imageViewModel.setCompressionRatio(100 - it.toInt())
                         }
                     }
@@ -243,7 +278,11 @@ fun ImageRender(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        SliderImplementation {
+                        SliderImplementation(
+                            resizeSliderPosition,
+                            sliderChangedCallback = { resizeSliderPosition = it }
+                        ) {
+                            imageViewModel.setResizeRatio(if(it < 1) 1 else it.toInt())
                         }
                         Row {
                             Text(
@@ -268,7 +307,76 @@ fun ImageRender(
                         )
                     }
                 }
+
+                Spacer(Modifier.padding(16.dp))
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    FlowRow(
+                        maxItemsInEachRow = 4,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        ImageInfo(
+                            stringResource(R.string.width),
+                            (processedImage?.image?.width ?:
+                            imageViewModel.originalBitmap!!.width).toString()
+                        )
+
+                        ImageInfo(
+                            stringResource(R.string.height),
+                            (processedImage?.image?.height ?:
+                            imageViewModel.originalBitmap!!.height).toString()
+                        )
+
+                        ImageInfo(
+                            stringResource(R.string.size),
+                            stringResource(R.string.kb, size / 1000)
+                        )
+
+                        ImageInfo(
+                            stringResource(R.string.sms_est),
+                            smsCount.toString()
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ImageInfo(
+    title: String = "Width",
+    value: String = "1344px",
+) {
+    Card(
+        Modifier.size(150.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 10.sp
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -280,14 +388,13 @@ fun ImageRenderPreview() {
         val context = LocalContext.current
         val bitmap = BitmapFactory.decodeResource(context.resources,
             R.drawable.pxl_20231020_104208875_portrait_2)
-        val processedImage = ImageViewModel.ProcessedImage(
-            image = bitmap,
-            size = bitmap.allocationByteCount.toLong()
-        )
+
+        val viewModel = remember{ ImageViewModel() }
+        viewModel.originalBitmap = bitmap
 
         ImageRender(
             rememberNavController(),
-            remember{ ImageViewModel() },
+            viewModel,
         )
     }
 }
@@ -296,15 +403,16 @@ fun ImageRenderPreview() {
 @Preview
 @Composable
 fun SliderImplementation(
+    sliderPosition: Float = 0f,
     sliderChangedCallback: (Float) -> Unit = {},
+    sliderFinishedChangedCallback: (Float) -> Unit = {},
 ) {
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
     Column {
         Slider(
             value = sliderPosition,
-            onValueChange = { sliderPosition = it },
+            onValueChange = { sliderChangedCallback(it) },
             onValueChangeFinished = {
-                sliderChangedCallback(sliderPosition)
+                sliderFinishedChangedCallback(sliderPosition)
             },
             thumb = {
                 Box(
