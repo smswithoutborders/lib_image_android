@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">lib_image_android</string>
+    <string name="aspect_ratio_is_locked_width_and_height_will_be_adjusted_proportionally">Aspect ratio is locked. Width and height will be adjusted proportionally.</string>
+    <string name="quality">Quality</string>
+    <string name="resize">Resize</string>
+    <string name="compression">Compression</string>
+    <string name="_100">100%</string>
+    <string name="_0">0%</string>
+    <string name="reset">Reset</string>
+    <string name="apply">Apply</string>
 </resources>

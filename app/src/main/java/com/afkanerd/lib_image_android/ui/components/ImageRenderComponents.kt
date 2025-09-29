@@ -2,25 +2,44 @@ package com.afkanerd.lib_image_android.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.telephony.SmsManager
 import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,15 +57,19 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.theme.Lib_image_androidTheme
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import org.intellij.lang.annotations.JdkConstants
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ImageRender(
     imageViewModel: ImageViewModel,
@@ -57,6 +80,7 @@ fun ImageRender(
     var size by remember{ mutableLongStateOf(processedImage!!.size / 1000L) }
     var height by remember{ mutableIntStateOf(processedImage!!.image.height) }
     var width by remember{ mutableIntStateOf(processedImage!!.image.width) }
+
     fun getSmsCount(): Int {
         if(processedImage!!.rawBytes == null)
             return 0
@@ -82,61 +106,172 @@ fun ImageRender(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        bottomBar = {},
-        topBar = {}
+        bottomBar = {
+            Column {
+                Row(
+                    Modifier.padding(16.dp)
+                ) {
+                    Button(onClick = {
+
+                    }, modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults
+                            .buttonColors(MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text(
+                            stringResource(R.string.reset),
+                            modifier = Modifier.padding(8.dp),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSecondary
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Button(onClick = {
+
+                    }, modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.apply),
+                            modifier = Modifier.padding(8.dp),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+            }
+        },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Edit image") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        TODO("Implement back")
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Default.ArrowBack,
+                            "")
+                    }
+                },
+            )
+        },
     ) { innerPadding ->
         Box(Modifier
             .fillMaxSize()
             .padding(innerPadding)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
+            Column(
+                Modifier.padding(8.dp)
             ) {
-                SliderDimensions {
-                    if(it < 1) {
-                        imageViewModel.height= imageViewModel.processedImage!!.image.height
-                        imageViewModel.width= imageViewModel.processedImage!!.image.width
-                    }
-                    else {
-                        imageViewModel.height= (imageViewModel.processedImage!!.image.height / it)
-                            .toInt()
-                        imageViewModel.width= (imageViewModel.processedImage!!.image.width / it)
-                            .toInt()
-                    }
-                    imageViewModel.compressImage(
-                        imageViewModel.processedImage!!.image,
-                    ).let { image ->
-                        processedImage = image
-                    }
-                }
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
                         bitmap = image.asImageBitmap(),
                         contentDescription = "Bitmap image",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(500.dp),
+                        modifier = Modifier.size(250.dp),
                     )
+                }
 
-                    SliderCompression {
-                        imageViewModel.compressionRatio = (100 - it.toInt())
-                        imageViewModel.compressImage(
-                            imageViewModel.processedImage!!.image,
-                        ).let { image ->
-                            processedImage = image
+                Spacer(Modifier.padding(16.dp))
+
+                Text(
+                    stringResource(R.string.compression),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Spacer(Modifier.padding(8.dp))
+
+                Card(
+                    onClick = {
+
+                    },
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                stringResource(R.string.quality),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "${imageViewModel.compressionRatio}%",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        SliderImplementation {
+
                         }
                     }
+                }
 
-                    Column{
-                        Text("type: ${processedImage!!.format}")
-                        Text("size: $size KB")
-                        Text("compression: ${imageViewModel.compressionRatio}")
-                        Text("sms count: $smsCount")
-                        Text("height: $height")
-                        Text("width: $width")
+                Spacer(Modifier.padding(16.dp))
+
+                Text(
+                    stringResource(R.string.resize),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Spacer(Modifier.padding(8.dp))
+
+                Card(
+                    onClick = { },
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                "Size",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "${imageViewModel.compressionRatio}%",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        SliderImplementation {
+                        }
+                        Row {
+                            Text(
+                                stringResource(R.string._0),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                stringResource(R.string._100),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(Modifier.padding(4.dp))
+                        Text(
+                            stringResource(R.string.aspect_ratio_is_locked_width_and_height_will_be_adjusted_proportionally),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                     }
                 }
             }
@@ -164,7 +299,7 @@ fun ImageRenderPreview() {
 
 @Preview
 @Composable
-fun SliderCompression(
+fun SliderImplementation(
     sliderChangedCallback: (Float) -> Unit = {},
 ) {
     var sliderPosition by remember { mutableFloatStateOf(0f) }
@@ -185,47 +320,4 @@ fun SliderCompression(
         )
     }
 
-}
-
-@Preview
-@Composable
-fun SliderDimensions(
-    sliderChangedCallback: (Float) -> Unit = {},
-) {
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
-    Column {
-        Slider(
-            value = sliderPosition,
-            onValueChange = { sliderPosition = it },
-            onValueChangeFinished = {
-                sliderChangedCallback(sliderPosition)
-            },
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.secondary,
-                activeTrackColor = MaterialTheme.colorScheme.secondary,
-                inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
-            steps = 9,
-            valueRange = 0f..100f,
-            modifier = Modifier
-                .graphicsLayer {
-                    rotationZ = 90f
-                    transformOrigin = TransformOrigin(0f, 0f)
-                }
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(
-                        Constraints(
-                            minWidth = constraints.minHeight,
-                            maxWidth = (constraints.maxHeight / 1.5).toInt(),
-                            minHeight = constraints.minWidth,
-                            maxHeight = constraints.maxHeight,
-                        )
-                    )
-                    layout(placeable.height, placeable.width) {
-                        placeable.place(0, -placeable.height)
-                    }
-                }
-        )
-//        Text(text = sliderPosition.toString())
-    }
 }
