@@ -315,29 +315,13 @@ fun ImageRender(
                 Spacer(Modifier.padding(16.dp))
 
                 Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
                 ) {
-                    FlowRow(
-                        maxItemsInEachRow = 2,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
-                    ) {
-                        ImageInfo(
-                            stringResource(R.string.width),
-                            (processedImage?.image?.width ?:
-                            imageViewModel.originalBitmap!!.width).toString()
-                        )
-
-                        ImageInfo(
-                            stringResource(R.string.height),
-                            (processedImage?.image?.height ?:
-                            imageViewModel.originalBitmap!!.height).toString()
-                        )
-
+                    Row {
                         ImageInfo(
                             stringResource(R.string.sms_est),
                             smsCount.toString()
@@ -346,6 +330,20 @@ fun ImageRender(
                         ImageInfo(
                             stringResource(R.string.size),
                             stringResource(R.string.kb, size / 1000)
+                        )
+
+                        ImageInfo(
+                            stringResource(R.string.width),
+                            (processedImage?.image?.width ?:
+                            imageViewModel.originalBitmap!!.width).toString(),
+                            false
+                        )
+
+                        ImageInfo(
+                            stringResource(R.string.height),
+                            (processedImage?.image?.height ?:
+                            imageViewModel.originalBitmap!!.height).toString(),
+                            false
                         )
                     }
                 }
@@ -359,28 +357,29 @@ fun ImageRender(
 fun ImageInfo(
     title: String = "Width",
     value: String = "1344px",
+    fixedSize: Boolean = true,
 ) {
-    Card(
-        Modifier.size(150.dp)
-    ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.secondary,
-                fontSize = 10.sp
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+    Column( Modifier.padding(16.dp) ) {
+        Card(Modifier.then(if(fixedSize) Modifier.size(80.dp) else Modifier)) {
+            Column(
+                Modifier
+                    .then(if (fixedSize) Modifier.fillMaxSize() else Modifier)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontSize = 10.sp
+                )
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -418,15 +417,15 @@ fun SliderImplementation(
             onValueChangeFinished = {
                 sliderFinishedChangedCallback(sliderPosition)
             },
-            thumb = {
-                Box(
-                    modifier = Modifier
-                        .padding(0.dp)
-                        .size(24.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape),
-                )
-            },
-            steps = 9,
+//            thumb = {
+//                Box(
+//                    modifier = Modifier
+//                        .padding(0.dp)
+//                        .size(24.dp)
+//                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+//                )
+//            },
+            steps = 100,
             valueRange = 0f..100f
         )
     }
