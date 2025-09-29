@@ -4,15 +4,20 @@ import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.os.Build
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import androidx.core.graphics.scale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 
 class ImageViewModel: ViewModel() {
-    var processedImage: ProcessedImage? = null
-
     data class ProcessedImage(
         var image: Bitmap,
         var size: Long,
@@ -20,9 +25,25 @@ class ImageViewModel: ViewModel() {
         var rawBytes: ByteArray? = null,
     )
 
-    var compressionRatio: Int = 100
-    var height: Int = -1
-    var width: Int = -1
+    var originalBitmap: Bitmap? = null
+    private var _processedImage = MutableStateFlow<ProcessedImage?>(null)
+    val processedImage: StateFlow<ProcessedImage?> = _processedImage.asStateFlow()
+
+    private var _compressionRatio = MutableStateFlow<Int>(100)
+    val compressionRatio = _compressionRatio.asStateFlow()
+
+    private var _resizeRatio = MutableStateFlow<Int>(1)
+    val resizeRatio = _resizeRatio.asStateFlow()
+
+    fun setResizeRatio(value: Int) {
+        _resizeRatio.value = value
+        _processedImage.value = compressImage(originalBitmap!!)
+    }
+
+    fun setCompressionRatio(value: Int) {
+        _compressionRatio.value = value
+        _processedImage.value = compressImage(originalBitmap!!)
+    }
 
     fun compressImage(
         bitmap: Bitmap,
@@ -32,7 +53,11 @@ class ImageViewModel: ViewModel() {
     ): ProcessedImage? {
         val bitmap = resizeImage(bitmap)
         val byteArrayOutputStream = ByteArrayOutputStream()
-        if(bitmap.compress(compressFormat, compressionRatio, byteArrayOutputStream)) {
+        if(bitmap.compress(
+                compressFormat,
+                _compressionRatio.value,
+                byteArrayOutputStream)
+        ) {
             val image =  byteArrayToBitmap(
                 byteArrayOutputStream.toByteArray(),
             )
@@ -64,8 +89,8 @@ class ImageViewModel: ViewModel() {
         bitmap: Bitmap,
     ): Bitmap {
         return bitmap.scale(
-            width,
-            height,
+            originalBitmap!!.width / resizeRatio.value,
+            originalBitmap!!.height / resizeRatio.value,
             false
         )
     }

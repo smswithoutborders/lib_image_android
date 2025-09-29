@@ -41,7 +41,10 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable<ImageRenderNav>{
-                        ImageRender( imageViewModel )
+                        ImageRender(
+                            navController = navController,
+                            imageViewModel = imageViewModel
+                        )
                     }
                 }
             }

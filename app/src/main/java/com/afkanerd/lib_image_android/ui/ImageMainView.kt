@@ -26,7 +26,10 @@ fun ImageMainView(
         Column(Modifier.padding(innerPadding)) {
             val bitmap = BitmapFactory.decodeResource(context.resources,
                 R.drawable.pxl_20231020_104208875_portrait_2)
-            ImageCompressionCompareRender(navController, imageViewModel, bitmap)
+            ImageCompressionCompareRender(
+                navController,
+                imageViewModel
+            )
         }
     }
 }

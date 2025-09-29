@@ -42,11 +42,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,6 +73,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.theme.Lib_image_androidTheme
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
@@ -79,19 +83,16 @@ import org.intellij.lang.annotations.JdkConstants
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ImageRender(
-    imageViewModel: ImageViewModel,
+    navController: NavController,
+    imageViewModel: ImageViewModel
 ) {
     val context = LocalContext.current
-    var processedImage by remember{ mutableStateOf( imageViewModel.processedImage)}
-    var image by remember{ mutableStateOf(processedImage!!.image) }
-    var size by remember{ mutableLongStateOf(processedImage!!.size / 1000L) }
-    var height by remember{ mutableIntStateOf(processedImage!!.image.height) }
-    var width by remember{ mutableIntStateOf(processedImage!!.image.width) }
+
+    val processedImage by imageViewModel.processedImage.collectAsState()
+    val compressionRatio by imageViewModel.compressionRatio.collectAsState()
+    val resizeRatio by imageViewModel.resizeRatio.collectAsState()
 
     fun getSmsCount(): Int {
-        if(processedImage!!.rawBytes == null)
-            return 0
-
         return (if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context
             .getSystemService(SmsManager::class.java)
             .createForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId()) else
@@ -101,15 +102,7 @@ fun ImageRender(
                 .encodeToString(processedImage!!.rawBytes,
                     Base64.DEFAULT)).size
     }
-    var smsCount by remember{ mutableIntStateOf(getSmsCount()) }
-
-    LaunchedEffect(processedImage,) {
-        image = processedImage!!.image
-        size = processedImage!!.size / 1000L
-        height = image.height
-        width = image.width
-        smsCount = getSmsCount()
-    }
+//    var smsCount by remember{ mutableIntStateOf(getSmsCount()) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -171,7 +164,8 @@ fun ImageRender(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        bitmap = image.asImageBitmap(),
+                        bitmap = processedImage?.image?.asImageBitmap() ?:
+                        imageViewModel.originalBitmap!!.asImageBitmap(),
                         contentDescription = "Bitmap image",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(250.dp),
@@ -204,7 +198,7 @@ fun ImageRender(
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
-                                "${imageViewModel.compressionRatio}%",
+                                "${compressionRatio}%",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -213,7 +207,7 @@ fun ImageRender(
                         Spacer(Modifier.padding(4.dp))
 
                         SliderImplementation {
-
+                            imageViewModel.setCompressionRatio(100 - it.toInt())
                         }
                     }
                 }
@@ -241,7 +235,7 @@ fun ImageRender(
                             )
                             Spacer(Modifier.weight(1f))
                             Text(
-                                "${imageViewModel.compressionRatio}%",
+                                "${resizeRatio}%",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -291,9 +285,10 @@ fun ImageRenderPreview() {
             size = bitmap.allocationByteCount.toLong()
         )
 
-        ImageRender(remember { ImageViewModel().apply {
-            this.processedImage = processedImage
-        } })
+        ImageRender(
+            rememberNavController(),
+            remember{ ImageViewModel() },
+        )
     }
 }
 
@@ -311,21 +306,13 @@ fun SliderImplementation(
             onValueChangeFinished = {
                 sliderChangedCallback(sliderPosition)
             },
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.secondary,
-                activeTrackColor = MaterialTheme.colorScheme.secondary,
-                inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
             thumb = {
-                Box {
-                    Surface(
-                        modifier = Modifier.size(24.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        onClick = {},
-                        content = {},
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .padding(0.dp)
+                        .size(24.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                )
             },
             steps = 9,
             valueRange = 0f..100f
