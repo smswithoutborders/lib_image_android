@@ -318,7 +318,7 @@ fun ImageRender(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     FlowRow(
-                        maxItemsInEachRow = 4,
+                        maxItemsInEachRow = 2,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
