@@ -44,6 +44,7 @@ class ImageViewModel: ViewModel() {
     }
 
     fun initialize() {
+        reset()
         _processedImage.value = compressImage(originalBitmap!!)
     }
 

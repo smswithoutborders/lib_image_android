@@ -6,6 +6,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.telephony.SmsManager
 import android.util.Base64
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -130,6 +131,9 @@ fun ImageRender(
         size = processedImage?.rawBytes?.size ?: 0
     }
 
+    BackHandler {
+        navController.popBackStack()
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -172,7 +176,7 @@ fun ImageRender(
                 title = { Text(stringResource(R.string.edit_image)) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        TODO("Implement back")
+                        navController.popBackStack()
                     }) {
                         Icon(
                             Icons.AutoMirrored.Default.ArrowBack,
@@ -387,7 +391,7 @@ fun ImageRenderPreview() {
     Lib_image_androidTheme {
         val context = LocalContext.current
         val bitmap = BitmapFactory.decodeResource(context.resources,
-            R.drawable.pxl_20231020_104208875_portrait_2)
+            R.drawable._0241226_124819)
 
         val viewModel = remember{ ImageViewModel() }
         viewModel.originalBitmap = bitmap

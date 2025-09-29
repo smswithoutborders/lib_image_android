@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -21,8 +22,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -85,15 +95,16 @@ fun ImageCompressionCompareRender(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Button(onClick = {
-            imagePicker.launch(arrayOf("*/*"))
-        }) {
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                "Click to load image",
-                Modifier.size(150.dp)
+        IconButton(onClick = {
+            imagePicker.launch(arrayOf("image/png", "image/jpg", "image/jpeg"))
+        }, Modifier.size(150.dp)) {
+            Icon(
+                Icons.Default.AddPhotoAlternate,
+                "",
+                Modifier.fillMaxSize()
             )
         }
+
     }
 }
 
@@ -102,8 +113,8 @@ fun ImageCompressionCompareRender(
 fun ImageRenderPreview() {
     Lib_image_androidTheme {
         val context = LocalContext.current
-        val bitmap = BitmapFactory.decodeResource(context.resources,
-            R.drawable.pxl_20231020_104208875_portrait_2)
+//        val bitmap = BitmapFactory.decodeResource(context.resources,
+//            R.drawable.)
 
         ImageCompressionCompareRender(
             rememberNavController(),
