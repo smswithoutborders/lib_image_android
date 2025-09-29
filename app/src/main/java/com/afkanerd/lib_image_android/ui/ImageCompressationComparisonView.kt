@@ -40,13 +40,17 @@ fun ImageCompressionCompareRender(
         image = bitmap,
         size = bitmap.allocationByteCount.toLong()
     )
-    val webpCompressed = imageViewModel
-        .compressImage(
-            bitmap,
-            0,
-            bitmap.height,
-            bitmap.width,
-        )
+
+    imageViewModel.height = bitmap.height
+    imageViewModel.width = bitmap.width
+
+    val imageViewModelCompression = remember{ ImageViewModel() }
+    imageViewModelCompression.height = bitmap.height
+    imageViewModelCompression.width = bitmap.width
+    imageViewModelCompression.compressionRatio = 0
+
+    val webpCompressed = imageViewModelCompression.compressImage(bitmap,)
+
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center,

@@ -2,6 +2,9 @@ package com.afkanerd.lib_image_android.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
+import android.telephony.SmsManager
+import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -47,17 +51,33 @@ import org.intellij.lang.annotations.JdkConstants
 fun ImageRender(
     imageViewModel: ImageViewModel,
 ) {
+    val context = LocalContext.current
     var processedImage by remember{ mutableStateOf( imageViewModel.processedImage)}
     var image by remember{ mutableStateOf(processedImage!!.image) }
     var size by remember{ mutableLongStateOf(processedImage!!.size / 1000L) }
     var height by remember{ mutableIntStateOf(processedImage!!.image.height) }
     var width by remember{ mutableIntStateOf(processedImage!!.image.width) }
+    fun getSmsCount(): Int {
+        if(processedImage!!.rawBytes == null)
+            return 0
 
-    LaunchedEffect(processedImage) {
+        return (if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context
+            .getSystemService(SmsManager::class.java)
+            .createForSubscriptionId(SmsManager.getDefaultSmsSubscriptionId()) else
+            SmsManager.getSmsManagerForSubscriptionId(SmsManager
+                .getDefaultSmsSubscriptionId()))
+            .divideMessage(Base64
+                .encodeToString(processedImage!!.rawBytes,
+                    Base64.DEFAULT)).size
+    }
+    var smsCount by remember{ mutableIntStateOf(getSmsCount()) }
+
+    LaunchedEffect(processedImage,) {
         image = processedImage!!.image
         size = processedImage!!.size / 1000L
         height = image.height
         width = image.width
+        smsCount = getSmsCount()
     }
 
     Scaffold(
@@ -75,16 +95,19 @@ fun ImageRender(
             ) {
                 SliderDimensions {
                     if(it < 1) {
-                        processedImage = imageViewModel.processedImage
+                        imageViewModel.height= imageViewModel.processedImage!!.image.height
+                        imageViewModel.width= imageViewModel.processedImage!!.image.width
                     }
                     else {
-                        ImageViewModel().compressImage(
-                            imageViewModel.processedImage!!.image,
-                            height= (imageViewModel.processedImage!!.image.height / it).toInt(),
-                            width= (imageViewModel.processedImage!!.image.width / it).toInt(),
-                        ).let { image ->
-                            processedImage = image
-                        }
+                        imageViewModel.height= (imageViewModel.processedImage!!.image.height / it)
+                            .toInt()
+                        imageViewModel.width= (imageViewModel.processedImage!!.image.width / it)
+                            .toInt()
+                    }
+                    imageViewModel.compressImage(
+                        imageViewModel.processedImage!!.image,
+                    ).let { image ->
+                        processedImage = image
                     }
                 }
                 Column(
@@ -95,10 +118,23 @@ fun ImageRender(
                         bitmap = image.asImageBitmap(),
                         contentDescription = "Bitmap image",
                         contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(500.dp),
                     )
+
+                    SliderCompression {
+                        imageViewModel.compressionRatio = (100 - it.toInt())
+                        imageViewModel.compressImage(
+                            imageViewModel.processedImage!!.image,
+                        ).let { image ->
+                            processedImage = image
+                        }
+                    }
+
                     Column{
                         Text("type: ${processedImage!!.format}")
                         Text("size: $size KB")
+                        Text("compression: ${imageViewModel.compressionRatio}")
+                        Text("sms count: $smsCount")
                         Text("height: $height")
                         Text("width: $width")
                     }
@@ -124,6 +160,31 @@ fun ImageRenderPreview() {
             this.processedImage = processedImage
         } })
     }
+}
+
+@Preview
+@Composable
+fun SliderCompression(
+    sliderChangedCallback: (Float) -> Unit = {},
+) {
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+    Column {
+        Slider(
+            value = sliderPosition,
+            onValueChange = { sliderPosition = it },
+            onValueChangeFinished = {
+                sliderChangedCallback(sliderPosition)
+            },
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.secondary,
+                activeTrackColor = MaterialTheme.colorScheme.secondary,
+                inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+            steps = 9,
+            valueRange = 0f..100f
+        )
+    }
+
 }
 
 @Preview
