@@ -8,4 +8,6 @@
     <string name="_0">0%</string>
     <string name="reset">Reset</string>
     <string name="apply">Apply</string>
+    <string name="size">Size</string>
+    <string name="edit_image">Edit image</string>
 </resources>

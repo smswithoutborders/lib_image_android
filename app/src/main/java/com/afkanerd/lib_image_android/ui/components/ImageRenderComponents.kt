@@ -7,7 +7,9 @@ import android.os.Build
 import android.telephony.SmsManager
 import android.util.Base64
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -31,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -51,6 +56,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -111,17 +118,13 @@ fun ImageRender(
                 Row(
                     Modifier.padding(16.dp)
                 ) {
-                    Button(onClick = {
+                    FilledTonalButton(onClick = {
 
-                    }, modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults
-                            .buttonColors(MaterialTheme.colorScheme.secondary)
-                    ) {
+                    }, modifier = Modifier.weight(1f),) {
                         Text(
                             stringResource(R.string.reset),
                             modifier = Modifier.padding(8.dp),
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSecondary
                         )
                     }
 
@@ -143,7 +146,7 @@ fun ImageRender(
         },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Edit image") },
+                title = { Text(stringResource(R.string.edit_image)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         TODO("Implement back")
@@ -185,10 +188,8 @@ fun ImageRender(
                 Spacer(Modifier.padding(8.dp))
 
                 Card(
-                    onClick = {
-
-                    },
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)
+                    colors = CardDefaults
+                        .cardColors(MaterialTheme.colorScheme.surfaceContainer)
                 ) {
                     Column(
                         Modifier.padding(16.dp),
@@ -226,16 +227,15 @@ fun ImageRender(
 
                 Spacer(Modifier.padding(8.dp))
 
-                Card(
-                    onClick = { },
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)
+                Card( colors = CardDefaults
+                    .cardColors(MaterialTheme.colorScheme.surfaceContainer)
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Row(
                             verticalAlignment = Alignment.Bottom
                         ) {
                             Text(
-                                "Size",
+                                stringResource(R.string.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -297,6 +297,7 @@ fun ImageRenderPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun SliderImplementation(
@@ -315,6 +316,17 @@ fun SliderImplementation(
                 activeTrackColor = MaterialTheme.colorScheme.secondary,
                 inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
             ),
+            thumb = {
+                Box {
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        onClick = {},
+                        content = {},
+                    )
+                }
+            },
             steps = 9,
             valueRange = 0f..100f
         )
