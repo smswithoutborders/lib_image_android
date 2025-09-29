@@ -321,15 +321,10 @@ fun ImageRender(
                         .fillMaxWidth()
                         .padding(20.dp)
                 ) {
-                    Row {
+                    FlowRow(maxItemsInEachRow = 3) {
                         ImageInfo(
                             stringResource(R.string.sms_est),
                             smsCount.toString()
-                        )
-
-                        ImageInfo(
-                            stringResource(R.string.size),
-                            stringResource(R.string.kb, size / 1000)
                         )
 
                         ImageInfo(
@@ -345,6 +340,11 @@ fun ImageRender(
                             imageViewModel.originalBitmap!!.height).toString(),
                             false
                         )
+
+                        ImageInfo(
+                            stringResource(R.string.size),
+                            stringResource(R.string.kb, size / 1000)
+                        )
                     }
                 }
             }
@@ -357,7 +357,7 @@ fun ImageRender(
 fun ImageInfo(
     title: String = "Width",
     value: String = "1344px",
-    fixedSize: Boolean = true,
+    fixedSize: Boolean = false,
 ) {
     Column( Modifier.padding(16.dp) ) {
         Card(Modifier.then(if(fixedSize) Modifier.size(80.dp) else Modifier)) {
