@@ -94,7 +94,8 @@ import org.intellij.lang.annotations.JdkConstants
 @Composable
 fun ImageRender(
     navController: NavController,
-    imageViewModel: ImageViewModel
+    imageViewModel: ImageViewModel,
+    initialize: Boolean = true
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
@@ -103,14 +104,18 @@ fun ImageRender(
     val compressionRatio by imageViewModel.compressionRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
 
-    var compressionSliderPosition by remember { mutableFloatStateOf(0f) }
-    var resizeSliderPosition by remember { mutableFloatStateOf(0f) }
+    var compressionSliderPosition by remember {
+        mutableFloatStateOf(100 - imageViewModel.compressionRatio.value.toFloat())
+    }
+    var resizeSliderPosition by remember {
+        mutableFloatStateOf(imageViewModel.resizeRatio.value.toFloat())
+    }
 
     var smsCount by remember{ mutableIntStateOf(0) }
     var size by remember{ mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
-        imageViewModel.initialize()
+        if(initialize) imageViewModel.initialize()
     }
 
     fun getSmsCount(): Int {
@@ -157,7 +162,7 @@ fun ImageRender(
                     Spacer(Modifier.width(8.dp))
 
                     Button(
-                        onClick = {},
+                        onClick = { navController.popBackStack() },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(

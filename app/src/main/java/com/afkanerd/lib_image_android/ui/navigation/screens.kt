@@ -7,4 +7,6 @@ import kotlinx.serialization.Serializable
 data object ImageRenderHomeNav
 
 @Serializable
-data object ImageRenderNav
+data class ImageRenderNav(
+    var initialize: Boolean = true
+)
