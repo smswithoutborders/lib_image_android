@@ -2,6 +2,7 @@ package com.afkanerd.lib_image_android.services
 
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -9,6 +10,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.work.ForegroundInfo
+import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.data.ImageTransmissionProtocol
 import com.afkanerd.lib_image_android.data.SmsWorkManager
 import com.afkanerd.lib_image_android.extensions.toByteArray
@@ -22,7 +24,10 @@ class ImageTransmissionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val formattedPayload = intent!!
+        startForeground(1,
+            createForegroundNotification(this, intent!!).notification)
+
+        val formattedPayload = intent
             .getByteArrayExtra(SmsWorkManager.FORMATTED_SMS_PAYLOAD)
             ?: return START_NOT_STICKY
 
@@ -88,5 +93,43 @@ class ImageTransmissionService : Service() {
         return dividedImage
     }
 
+    private fun createForegroundNotification(
+        context: Context,
+        intent: Intent,
+    ) : ForegroundInfo {
+        val pendingIntent = PendingIntent
+            .getActivity(context,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE)
+
+        val title = "Long running..."
+        val description = ""
+
+        val builder = NotificationCompat.Builder(context, "0")
+            .setContentTitle(title)
+            .setContentText("Status")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(pendingIntent)
+            .setProgress(100, 50, false)
+
+//        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+//            builder.setStyle(NotificationCompat.ProgressStyle())
+//        } else {
+//            builder.setStyle(NotificationCompat.BigTextStyle().bigText(description))
+//        }
+
+        val notification = builder.build()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                0, notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(0, notification)
+        }
+    }
 
 }

@@ -22,7 +22,7 @@ class NotificationInit : Initializer<NotificationManager> {
         val notificationManager: NotificationManager =
             context.getSystemService( NotificationManager::class.java )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel(context, notificationManager)
+            createChannel(context, notificationManager)
         }
         return notificationManager
     }
@@ -32,15 +32,7 @@ class NotificationInit : Initializer<NotificationManager> {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannel(
-        context: Context,
-        notificationManager: NotificationManager
-    ) {
-        createNotificationChannelIncomingMessage(context, notificationManager)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun createNotificationChannelIncomingMessage(
+    private fun createChannel(
         context: Context,
         notificationManager: NotificationManager
     ) {

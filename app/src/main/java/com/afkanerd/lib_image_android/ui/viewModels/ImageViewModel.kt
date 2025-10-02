@@ -156,7 +156,7 @@ class ImageViewModel: ViewModel() {
 
         val remoteListenersListenerWorker = OneTimeWorkRequestBuilder<SmsWorkManager>()
             .setConstraints(constraints)
-            .setId(generateUuidFromLong(0))
+            .setId(generateUuidFromLong(System.currentTimeMillis()))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 WorkRequest.MIN_BACKOFF_MILLIS,
@@ -167,9 +167,10 @@ class ImageViewModel: ViewModel() {
                     SmsWorkManager.ITP_PAYLOAD,
                     intent.getStringExtra(SmsWorkManager.ITP_PAYLOAD)
                 )
-                .putString(
+                .putBoolean(
                     SmsWorkManager.ITP_PAYLOAD_BASE64,
-                    intent.getStringExtra(SmsWorkManager.ITP_PAYLOAD_BASE64)
+                    intent.getBooleanExtra(SmsWorkManager.ITP_PAYLOAD_BASE64,
+                        false)
                 )
                 .build()
             )
@@ -181,58 +182,7 @@ class ImageViewModel: ViewModel() {
                 System.currentTimeMillis()}",
             ExistingWorkPolicy.REPLACE,
             remoteListenersListenerWorker
-        ).also {
-            createForegroundNotification(
-                context = context,
-                intent = intent,
-                logo = logo
-            )
-        }
+        )
     }
 
-    private fun createForegroundNotification(
-        context: Context,
-        intent: Intent,
-        logo: Int,
-    ) : ForegroundInfo {
-        val pendingIntent = PendingIntent
-            .getActivity(context,
-                0,
-                intent,
-                PendingIntent.FLAG_IMMUTABLE)
-
-        val title = "Long running..."
-        val description = ""
-
-        val builder = NotificationCompat.Builder(context, "0")
-            .setContentTitle(title)
-            .setContentText("Status")
-            .setSmallIcon(logo)
-            .setOngoing(true)
-            .setRequestPromotedOngoing(true)
-            .setContentIntent(pendingIntent)
-
-//        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-//            notification.setStyle(NotificationCompat.ProgressStyle())
-//        } else {
-//            notification
-//                .setStyle(NotificationCompat.BigTextStyle()
-//                .bigText(description))
-//                .setProgress(100, 50, false)
-//        }
-
-        val notification = builder
-            .setStyle(NotificationCompat.BigTextStyle().bigText(description))
-            .setProgress(100, 50, false)
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(
-                0, notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            ForegroundInfo(0, notification)
-        }
-    }
 }

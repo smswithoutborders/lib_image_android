@@ -1,13 +1,17 @@
 package com.afkanerd.lib_image_android.data
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Base64
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.afkanerd.lib_image_android.services.ImageTransmissionService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,9 +49,10 @@ class SmsWorkManager(
 
         handleBroadcast()
 
-        workValue.first { it != null }
-
-        return workValue.value!!
+//        workValue.first { it != null }
+//
+//        return workValue.value!!
+        return Result.success()
     }
 
     /**
@@ -71,7 +76,6 @@ class SmsWorkManager(
             ContextCompat.RECEIVER_EXPORTED
         )
     }
-
 
     companion object {
         const val ITP_PAYLOAD = "ITP_PAYLOAD"
