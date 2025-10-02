@@ -1,27 +1,54 @@
 package com.afkanerd.lib_image_android.ui.viewModels
 
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import androidx.core.graphics.scale
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
+import androidx.work.WorkManager
+import androidx.work.WorkRequest
+import com.afkanerd.lib_image_android.data.SmsWorkManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.Json
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import java.util.prefs.Preferences
 
 class ImageViewModel: ViewModel() {
+
+    @Serializable
     data class ProcessedImage(
-        var image: Bitmap,
+        @Transient
+        var image: Bitmap? = null,
         var size: Long,
         var format: String = "raw",
         var rawBytes: ByteArray? = null,
@@ -97,7 +124,6 @@ class ImageViewModel: ViewModel() {
             )
     }
 
-
     fun resizeImage(
         bitmap: Bitmap,
     ): Bitmap {
@@ -106,5 +132,107 @@ class ImageViewModel: ViewModel() {
             originalBitmap!!.height / resizeRatio.value,
             false
         )
+    }
+
+    fun generateUuidFromLong(input: Long): UUID {
+        // Generate a UUID from the long by using the input directly
+        // for the most significant bits and setting the least significant bits to 0.
+        val mostSigBits = input
+        val leastSigBits = 0L // You can modify this if you want to use more of the long
+
+        return UUID(mostSigBits, leastSigBits)
+    }
+
+    fun startWorkManager(
+        context: Context,
+        intent: Intent,
+        logo: Int,
+    ): Operation {
+        val constraints : Constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build();
+
+        val workManager = WorkManager.getInstance(context)
+
+        val remoteListenersListenerWorker = OneTimeWorkRequestBuilder<SmsWorkManager>()
+            .setConstraints(constraints)
+            .setId(generateUuidFromLong(0))
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                WorkRequest.MIN_BACKOFF_MILLIS,
+                TimeUnit.MILLISECONDS
+            )
+            .setInputData(Data.Builder()
+                .putString(
+                    SmsWorkManager.ITP_PAYLOAD,
+                    intent.getStringExtra(SmsWorkManager.ITP_PAYLOAD)
+                )
+                .putString(
+                    SmsWorkManager.ITP_PAYLOAD_BASE64,
+                    intent.getStringExtra(SmsWorkManager.ITP_PAYLOAD_BASE64)
+                )
+                .build()
+            )
+            .addTag(SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG)
+            .build();
+
+        return workManager.enqueueUniqueWork(
+            "$SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG.${
+                System.currentTimeMillis()}",
+            ExistingWorkPolicy.REPLACE,
+            remoteListenersListenerWorker
+        ).also {
+            createForegroundNotification(
+                context = context,
+                intent = intent,
+                logo = logo
+            )
+        }
+    }
+
+    private fun createForegroundNotification(
+        context: Context,
+        intent: Intent,
+        logo: Int,
+    ) : ForegroundInfo {
+        val pendingIntent = PendingIntent
+            .getActivity(context,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE)
+
+        val title = "Long running..."
+        val description = ""
+
+        val builder = NotificationCompat.Builder(context, "0")
+            .setContentTitle(title)
+            .setContentText("Status")
+            .setSmallIcon(logo)
+            .setOngoing(true)
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(pendingIntent)
+
+//        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+//            notification.setStyle(NotificationCompat.ProgressStyle())
+//        } else {
+//            notification
+//                .setStyle(NotificationCompat.BigTextStyle()
+//                .bigText(description))
+//                .setProgress(100, 50, false)
+//        }
+
+        val notification = builder
+            .setStyle(NotificationCompat.BigTextStyle().bigText(description))
+            .setProgress(100, 50, false)
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                0, notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(0, notification)
+        }
     }
 }

@@ -14,4 +14,5 @@
     <string name="height">Height</string>
     <string name="kb">%1$d KB</string>
     <string name="sms_est">SMS Est.</string>
+    <string name="image_transmission_service">Image Transmission Service</string>
 </resources>
