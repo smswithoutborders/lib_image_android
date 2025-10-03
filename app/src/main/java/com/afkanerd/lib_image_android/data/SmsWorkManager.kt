@@ -125,6 +125,7 @@ class SmsWorkManager(
         const val ITP_IMAGE_LENGTH = "ITP_IMAGE_LENGTH"
         const val ITP_TEXT_LENGTH = "ITP_TEXT_LENGTH"
         const val ITP_SERVICE_ICON = "ITP_SERVICE_ICON"
+        const val ITP_STOP_SERVICE = "ITP_STOP_SERVICE"
         const val IMAGE_TRANSMISSION_WORK_MANAGER_TAG = "IMAGE_TRANSMISSION_WORK_MANAGER_TAG"
     }
 

@@ -15,4 +15,8 @@
     <string name="kb">%1$d KB</string>
     <string name="sms_est">SMS Est.</string>
     <string name="image_transmission_service">Image Transmission Service</string>
+    <string name="sending_images">Sending images...</string>
+    <string name="of_sent">%1$d of %2$d sent...</string>
+    <string name="stop">Stop</string>
+    <string name="pause">Pause</string>
 </resources>
