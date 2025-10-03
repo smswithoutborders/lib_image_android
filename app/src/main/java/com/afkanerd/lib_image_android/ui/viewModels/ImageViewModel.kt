@@ -145,8 +145,12 @@ class ImageViewModel: ViewModel() {
 
     fun startWorkManager(
         context: Context,
-        intent: Intent,
+        formattedPayload: ByteArray,
         logo: Int,
+        version: Byte,
+        sessionId: Byte,
+        imageLength: ByteArray,
+        textLength: ByteArray,
     ): Operation {
         val constraints : Constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -163,15 +167,12 @@ class ImageViewModel: ViewModel() {
                 TimeUnit.MILLISECONDS
             )
             .setInputData(Data.Builder()
-                .putString(
-                    SmsWorkManager.ITP_PAYLOAD,
-                    intent.getStringExtra(SmsWorkManager.ITP_PAYLOAD)
-                )
-                .putBoolean(
-                    SmsWorkManager.ITP_PAYLOAD_BASE64,
-                    intent.getBooleanExtra(SmsWorkManager.ITP_PAYLOAD_BASE64,
-                        false)
-                )
+                .putByteArray(SmsWorkManager.ITP_PAYLOAD, formattedPayload)
+                .putInt(SmsWorkManager.ITP_SERVICE_ICON, logo)
+                .putByte(SmsWorkManager.ITP_VERSION, version)
+                .putByte(SmsWorkManager.ITP_SESSION_ID, sessionId)
+                .putByteArray(SmsWorkManager.ITP_IMAGE_LENGTH, imageLength)
+                .putByteArray(SmsWorkManager.ITP_TEXT_LENGTH, textLength)
                 .build()
             )
             .addTag(SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG)
@@ -180,7 +181,7 @@ class ImageViewModel: ViewModel() {
         return workManager.enqueueUniqueWork(
             "$SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG.${
                 System.currentTimeMillis()}",
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             remoteListenersListenerWorker
         )
     }

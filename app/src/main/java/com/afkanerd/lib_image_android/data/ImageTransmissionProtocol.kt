@@ -2,14 +2,22 @@ package com.afkanerd.lib_image_android.data
 
 import android.content.Context
 import android.util.Base64
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "itp_sessions")
 
 @Serializable
 data class ImageTransmissionProtocol(
-    val version: Byte = 0x4,
+    val version: Byte,
     val sessionId: Byte,
-    val segNumber: Int, // nibble
-    val numberSegments: Int, // nibble
+    val segNumber: Int = -1, // nibble
+    val numberSegments: Int = -1, // nibble
     val imageLength: Short, // only in first segment
     val textLength: Short, // only in first segment
     val image: ByteArray,
@@ -20,6 +28,15 @@ data class ImageTransmissionProtocol(
         val low = (numberSegments and 0x0F)
         return (hi or low).toByte()
     }
+}
+
+suspend fun Context.getItpSession() : Int {
+    val sessionId = intPreferencesKey("session_id")
+    dataStore.edit { session ->
+        val currentSession = session[sessionId] ?: 0
+        session[sessionId] = if(currentSession >=255) 0 else currentSession + 1
+    }
+    return dataStore.data.first()[sessionId]!!
 }
 
 fun Short.toByteArray(): ByteArray {

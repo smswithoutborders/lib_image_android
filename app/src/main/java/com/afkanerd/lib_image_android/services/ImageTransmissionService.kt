@@ -13,7 +13,11 @@ import androidx.work.ForegroundInfo
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.data.ImageTransmissionProtocol
 import com.afkanerd.lib_image_android.data.SmsWorkManager
+import com.afkanerd.lib_image_android.data.getItpSession
 import com.afkanerd.lib_image_android.extensions.toByteArray
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 class ImageTransmissionService : Service() {
@@ -24,29 +28,43 @@ class ImageTransmissionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(1,
-            createForegroundNotification(this, intent!!).notification)
-
-        val formattedPayload = intent
-            .getByteArrayExtra(SmsWorkManager.FORMATTED_SMS_PAYLOAD)
+        val icon = intent?.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
             ?: return START_NOT_STICKY
 
-        val itp = intent.getStringExtra(SmsWorkManager.Companion.ITP_PAYLOAD).let {
-            if(it == null) return START_NOT_STICKY
-            Json.Default.decodeFromString<ImageTransmissionProtocol>(it)
-        }
+        startForeground(1,
+            createForegroundNotification(
+                this,
+                intent,
+                icon = icon
+            ).notification
+        )
 
-        try {
-            dividedPayload = divideImagePayload(
-                formattedPayload,
-                itp
-            )
-        } catch(e: Exception) {
-            e.printStackTrace()
-        }
+        val payload = intent.getByteArrayExtra(SmsWorkManager.ITP_PAYLOAD)
+            ?: return START_NOT_STICKY
 
-        while(true) {
-            Thread.sleep(5000)
+        val version = intent.getByteExtra( SmsWorkManager.ITP_VERSION, 0x0)
+
+        val sessionId = intent.getByteExtra( SmsWorkManager.ITP_SESSION_ID, 0x0)
+
+        val imageLength = intent.getShortExtra(SmsWorkManager.ITP_IMAGE_LENGTH,
+            0)
+
+        val textLength = intent.getShortExtra(SmsWorkManager.ITP_TEXT_LENGTH,
+            0)
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                dividedPayload = divideImagePayload(
+                    payload = payload,
+                    version = version,
+                    sessionId = sessionId,
+                    imageLength = imageLength,
+                    textLength = textLength,
+                )
+            } catch(e: Exception) {
+                e.printStackTrace()
+            }
+
         }
         return START_STICKY
     }
@@ -54,7 +72,10 @@ class ImageTransmissionService : Service() {
     @Throws
     private fun divideImagePayload(
         payload: ByteArray,
-        imageTransmissionProtocol: ImageTransmissionProtocol,
+        version: Byte,
+        sessionId: Byte,
+        imageLength: Short,
+        textLength: Short,
     ): MutableList<ByteArray> {
         val segmentSize: Int = 3
         var encodedPayload = payload
@@ -63,16 +84,9 @@ class ImageTransmissionService : Service() {
 
         var segmentNumber = 0
         do {
-            var metaData = byteArrayOf(
-                imageTransmissionProtocol.version,
-                imageTransmissionProtocol.sessionId,
-                imageTransmissionProtocol.getSegNumberNumberSegment(segmentNumber),
-            )
-            if(segmentNumber == 0) {
-                metaData +=
-                    imageTransmissionProtocol.imageLength.toByteArray() +
-                            imageTransmissionProtocol.textLength.toByteArray()
-            }
+            var metaData = byteArrayOf(version, sessionId, 0,)
+            if(segmentNumber == 0) { metaData +=
+                imageLength.toByteArray() + textLength.toByteArray() }
 
             val size = (standardSegmentSize - metaData.size)
                 .coerceAtMost(encodedPayload.size)
@@ -96,6 +110,7 @@ class ImageTransmissionService : Service() {
     private fun createForegroundNotification(
         context: Context,
         intent: Intent,
+        icon: Int,
     ) : ForegroundInfo {
         val pendingIntent = PendingIntent
             .getActivity(context,
@@ -109,7 +124,7 @@ class ImageTransmissionService : Service() {
         val builder = NotificationCompat.Builder(context, "0")
             .setContentTitle(title)
             .setContentText("Status")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(icon)
             .setOngoing(true)
             .setRequestPromotedOngoing(true)
             .setContentIntent(pendingIntent)
@@ -131,5 +146,4 @@ class ImageTransmissionService : Service() {
             ForegroundInfo(0, notification)
         }
     }
-
 }
