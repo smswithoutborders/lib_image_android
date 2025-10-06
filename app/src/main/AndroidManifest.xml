@@ -4,28 +4,6 @@
 
     <application
         android:label="@string/app_name"
-        android:localeConfig="@xml/locales_config" >
-
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-
-            <meta-data
-                android:name="com.afkanerd.lib_image_android.providers.NotificationInit"
-                android:value="androidx.startup" />
-        </provider>
-
-        <receiver
-            android:name="com.afkanerd.lib_image_android.receivers.NotificationActionImpl"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.afkanerd.lib_image_android.NOTIFICATION_STOP_ACTION_INTENT_ACTION" />
-                <action android:name="com.afkanerd.lib_image_android.NOTIFICATION_PAUSE_ACTION_INTENT_ACTION" />
-            </intent-filter>
-        </receiver>
-    </application>
+        android:localeConfig="@xml/locales_config" />
 
 </manifest>

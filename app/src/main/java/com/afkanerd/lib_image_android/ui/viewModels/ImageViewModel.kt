@@ -1,47 +1,20 @@
 package com.afkanerd.lib_image_android.ui.viewModels
 
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.os.Build
-import android.util.Base64
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 import androidx.core.graphics.scale
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.Operation
-import androidx.work.WorkManager
-import androidx.work.WorkRequest
-import com.afkanerd.lib_image_android.data.SmsWorkManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.json.Json
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import java.util.prefs.Preferences
 
 class ImageViewModel: ViewModel() {
 
@@ -131,58 +104,6 @@ class ImageViewModel: ViewModel() {
             originalBitmap!!.width / resizeRatio.value,
             originalBitmap!!.height / resizeRatio.value,
             false
-        )
-    }
-
-    fun generateUuidFromLong(input: Long): UUID {
-        // Generate a UUID from the long by using the input directly
-        // for the most significant bits and setting the least significant bits to 0.
-        val mostSigBits = input
-        val leastSigBits = 0L // You can modify this if you want to use more of the long
-
-        return UUID(mostSigBits, leastSigBits)
-    }
-
-    fun startWorkManager(
-        context: Context,
-        formattedPayload: ByteArray,
-        logo: Int,
-        version: Byte,
-        sessionId: Byte,
-        imageLength: ByteArray,
-        textLength: ByteArray,
-    ): Operation {
-        val constraints : Constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build();
-
-        val workManager = WorkManager.getInstance(context)
-
-        val remoteListenersListenerWorker = OneTimeWorkRequestBuilder<SmsWorkManager>()
-            .setConstraints(constraints)
-            .setId(generateUuidFromLong(System.currentTimeMillis()))
-            .setBackoffCriteria(
-                BackoffPolicy.LINEAR,
-                WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS
-            )
-            .setInputData(Data.Builder()
-                .putByteArray(SmsWorkManager.ITP_PAYLOAD, formattedPayload)
-                .putInt(SmsWorkManager.ITP_SERVICE_ICON, logo)
-                .putByte(SmsWorkManager.ITP_VERSION, version)
-                .putByte(SmsWorkManager.ITP_SESSION_ID, sessionId)
-                .putByteArray(SmsWorkManager.ITP_IMAGE_LENGTH, imageLength)
-                .putByteArray(SmsWorkManager.ITP_TEXT_LENGTH, textLength)
-                .build()
-            )
-            .addTag(SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG)
-            .build();
-
-        return workManager.enqueueUniqueWork(
-            "$SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG.${
-                System.currentTimeMillis()}",
-            ExistingWorkPolicy.KEEP,
-            remoteListenersListenerWorker
         )
     }
 
