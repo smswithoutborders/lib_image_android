@@ -38,9 +38,10 @@ class ImageViewModel: ViewModel() {
     val resizeRatio = _resizeRatio.asStateFlow()
 
     fun reset() {
+        originalBitmap = null
+        _processedImage.value = null
         _compressionRatio.value = 100
         _resizeRatio.value = 1
-        _processedImage.value = null
     }
 
     fun initialize() {
@@ -56,6 +57,17 @@ class ImageViewModel: ViewModel() {
     fun setCompressionRatio(value: Int) {
         _compressionRatio.value = value
         _processedImage.value = compressImage(originalBitmap!!)
+    }
+
+    fun setImage(
+        bitmap: Bitmap,
+        rawBytes: ByteArray
+    ) {
+        _processedImage.value = ProcessedImage(
+            image = bitmap,
+            rawBytes = rawBytes,
+            size = rawBytes.size.toLong()
+        )
     }
 
     private fun compressImage(
