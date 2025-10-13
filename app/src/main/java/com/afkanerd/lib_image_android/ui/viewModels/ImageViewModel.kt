@@ -38,7 +38,6 @@ class ImageViewModel: ViewModel() {
     val resizeRatio = _resizeRatio.asStateFlow()
 
     fun reset() {
-        originalBitmap = null
         _processedImage.value = null
         _compressionRatio.value = 100
         _resizeRatio.value = 1
