@@ -37,6 +37,11 @@ class ImageViewModel: ViewModel() {
     private var _resizeRatio = MutableStateFlow<Int>(1)
     val resizeRatio = _resizeRatio.asStateFlow()
 
+    fun resetComplete() {
+        originalBitmap = null
+        reset()
+    }
+
     fun reset() {
         _processedImage.value = null
         _compressionRatio.value = 100
