@@ -4,6 +4,7 @@ plugins {
     id("com.android.library")
     id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.20'
     id 'org.jetbrains.kotlin.plugin.compose' version '2.2.20'
+    id 'maven-publish'
 }
 
 android {
@@ -35,24 +36,38 @@ android {
     }
 }
 
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'com.afkanerd'
+            artifactId = 'lib_image_android'
+            version = '1.0'
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
+}
+
 dependencies {
 
     implementation "androidx.core:core-ktx:1.17.0"
     implementation "androidx.appcompat:appcompat:1.7.1"
-    implementation "com.google.android.material:material:1.12.0"
-    implementation "androidx.compose.runtime:runtime:1.9.0"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.9.0"
-    implementation "androidx.navigation:navigation-runtime-ktx:2.9.3"
-    implementation "androidx.navigation:navigation-compose:2.9.3"
-    implementation "androidx.compose.material3:material3:1.3.2"
-    implementation "androidx.compose.animation:animation:1.9.0"
+    implementation "com.google.android.material:material:1.13.0"
+    implementation "androidx.compose.runtime:runtime:1.9.3"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.9.3"
+    implementation "androidx.navigation:navigation-runtime-ktx:2.9.5"
+    implementation "androidx.navigation:navigation-compose:2.9.5"
+    implementation "androidx.compose.material3:material3:1.4.0"
+    implementation "androidx.compose.animation:animation:1.9.3"
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.test.ext:junit:1.3.0"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.7.0"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0"
 
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2"
-    debugImplementation "androidx.compose.ui:ui-tooling:1.9.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.9.3"
 
     def nav_version = "2.9.4"
 
@@ -70,7 +85,7 @@ dependencies {
     androidTestImplementation("androidx.navigation:navigation-testing:$nav_version")
 
     // JSON serialization library, works with the Kotlin serialization plugin
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     implementation("androidx.compose.material:material-icons-extended-android:1.7.8")
 
