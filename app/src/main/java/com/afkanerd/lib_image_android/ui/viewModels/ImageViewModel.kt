@@ -27,69 +27,24 @@ class ImageViewModel: ViewModel() {
         var rawBytes: ByteArray? = null,
     )
 
-    var originalBitmap: Bitmap? = null
-    private var _processedImage = MutableStateFlow<ProcessedImage?>(null)
-    val processedImage: StateFlow<ProcessedImage?> = _processedImage.asStateFlow()
-
-    private var _compressionRatio = MutableStateFlow<Int>(100)
-    val compressionRatio = _compressionRatio.asStateFlow()
-
-    private var _resizeRatio = MutableStateFlow<Int>(1)
-    val resizeRatio = _resizeRatio.asStateFlow()
-
-    fun resetComplete() {
-        originalBitmap = null
-        reset()
-    }
-
-    fun reset() {
-        _processedImage.value = null
-        _compressionRatio.value = 100
-        _resizeRatio.value = 1
-    }
-
-    fun initialize() {
-        reset()
-        _processedImage.value = compressImage(originalBitmap!!)
-    }
-
-    fun setResizeRatio(value: Int) {
-        _resizeRatio.value = value
-        _processedImage.value = compressImage(originalBitmap!!)
-    }
-
-    fun setCompressionRatio(value: Int) {
-        _compressionRatio.value = value
-        _processedImage.value = compressImage(originalBitmap!!)
-    }
-
-    fun setImage(
+    fun compressImage(
         bitmap: Bitmap,
-        rawBytes: ByteArray
-    ) {
-        _processedImage.value = ProcessedImage(
-            image = bitmap,
-            rawBytes = rawBytes,
-            size = rawBytes.size.toLong()
-        )
-    }
-
-    private fun compressImage(
-        bitmap: Bitmap,
+        qualityRatio: Int,
+        width: Int,
+        height: Int,
         compressFormat: CompressFormat =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
                 CompressFormat.WEBP_LOSSY else CompressFormat.WEBP
     ): ProcessedImage? {
-        val bitmap = resizeImage(bitmap)
+        val bitmap = resizeImage(
+            bitmap,
+            qualityRatio,
+            width,
+            height
+        )
         val byteArrayOutputStream = ByteArrayOutputStream()
-        if(bitmap.compress(
-                compressFormat,
-                _compressionRatio.value,
-                byteArrayOutputStream)
-        ) {
-            val image =  byteArrayToBitmap(
-                byteArrayOutputStream.toByteArray(),
-            )
+        if(bitmap.compress( compressFormat, qualityRatio, byteArrayOutputStream)) {
+            val image =  byteArrayToBitmap( byteArrayOutputStream.toByteArray())
             return ProcessedImage(
                 image,
                 byteArrayOutputStream.size().toLong(),
@@ -115,10 +70,13 @@ class ImageViewModel: ViewModel() {
 
     fun resizeImage(
         bitmap: Bitmap,
+        ratio: Int,
+        width: Int,
+        height: Int
     ): Bitmap {
         return bitmap.scale(
-            originalBitmap!!.width / resizeRatio.value,
-            originalBitmap!!.height / resizeRatio.value,
+            width / ratio,
+            height / ratio,
             false
         )
     }

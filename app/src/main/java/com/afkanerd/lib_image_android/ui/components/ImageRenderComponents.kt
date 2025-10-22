@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -80,6 +81,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -89,9 +91,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil3.compose.AsyncImage
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.ImageMainView
 import com.afkanerd.lib_image_android.ui.theme.Lib_image_androidTheme
@@ -103,22 +107,17 @@ import org.intellij.lang.annotations.JdkConstants
 @Composable
 fun ImageRender(
     navController: NavController,
+    bitmap: Bitmap,
     imageViewModel: ImageViewModel,
-    initialize: Boolean = true
+    maxNumberSms: Int = 64,
+    smsCountPaddingValue: Int = 0,
+    backActionCallback: () -> Unit = { navController.popBackStack() },
+    onFinishCallback: () -> Unit,
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
 
-    val processedImage by imageViewModel.processedImage.collectAsState()
-    val compressionRatio by imageViewModel.compressionRatio.collectAsState()
-    val resizeRatio by imageViewModel.resizeRatio.collectAsState()
-
-    var compressionSliderPosition by remember {
-        mutableFloatStateOf(100 - imageViewModel.compressionRatio.value.toFloat())
-    }
-    var resizeSliderPosition by remember {
-        mutableFloatStateOf(imageViewModel.resizeRatio.value.toFloat())
-    }
+    val processedImage by remember{ mutableStateOf<ImageViewModel.ProcessedImage?>(null) }
 
     var smsCount by remember{ mutableIntStateOf(0) }
     var size by remember{ mutableIntStateOf(0) }
@@ -126,8 +125,16 @@ fun ImageRender(
     var showQualitySlider by remember{ mutableStateOf(false ) }
     var showResizeSlider by remember{ mutableStateOf(false ) }
 
-    LaunchedEffect(Unit) {
-        if(initialize) imageViewModel.initialize()
+    var qualityRatio by remember{ mutableFloatStateOf(100f ) }
+    var resizeRatio by remember{ mutableFloatStateOf(0f ) }
+
+    LaunchedEffect(qualityRatio, resizeRatio) {
+        imageViewModel.compressImage(
+            bitmap,
+            qualityRatio.toInt(),
+            (bitmap.width / resizeRatio).toInt(),
+            (bitmap.height / resizeRatio).toInt(),
+        )
     }
 
     fun getSmsCount(): Int {
@@ -140,7 +147,7 @@ fun ImageRender(
             .createForSubscriptionId(subId) else
             SmsManager.getSmsManagerForSubscriptionId(subId))
             .divideMessage(Base64.encodeToString(processedImage!!.rawBytes,
-                Base64.DEFAULT)).size
+                Base64.DEFAULT)).size + smsCountPaddingValue
     }
 
     LaunchedEffect(processedImage) {
@@ -154,48 +161,22 @@ fun ImageRender(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            Column {
-                Row( Modifier.padding(8.dp) ) {
-                    FilledTonalButton(onClick = {
-                        imageViewModel.reset()
-                        compressionSliderPosition = 0f
-                        resizeSliderPosition = 0f
-                    }, modifier = Modifier.weight(1f),) {
-                        Text(
-                            stringResource(R.string.reset),
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            stringResource(R.string.apply),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-            }
-        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.edit_image)) },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
+                    IconButton(onClick = backActionCallback ) {
                         Icon(
                             Icons.AutoMirrored.Default.ArrowBack,
                             "")
                     }
                 },
+                actions = {
+                    IconButton(onClick = onFinishCallback ) {
+                        Icon(Icons.Default.Check,
+                            stringResource(R.string.apply))
+                    }
+                }
             )
         },
     ) { innerPadding ->
@@ -214,8 +195,7 @@ fun ImageRender(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        bitmap = processedImage?.image?.asImageBitmap() ?:
-                        imageViewModel.originalBitmap!!.asImageBitmap(),
+                        bitmap = bitmap.asImageBitmap(),
                         contentDescription = "Bitmap image",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(250.dp),
@@ -239,14 +219,12 @@ fun ImageRender(
 
                         ImageInfo(
                             stringResource(R.string.width),
-                            (processedImage?.image?.width ?:
-                            imageViewModel.originalBitmap!!.width).toString(),
+                            (processedImage?.image?.width ?: bitmap.width).toString(),
                         )
 
                         ImageInfo(
                             stringResource(R.string.height),
-                            (processedImage?.image?.height ?:
-                            imageViewModel.originalBitmap!!.height).toString(),
+                            (processedImage?.image?.height ?: bitmap.height).toString(),
                         )
 
                         ImageInfo(
@@ -279,14 +257,14 @@ fun ImageRender(
                     }
 
                     if(showQualitySlider || inPreviewMode) {
-                        Spacer(Modifier.padding(8.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         Card(
                             colors = CardDefaults
                                 .cardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
                             SliderImplementation(stringResource(R.string.quality)) {
-                                imageViewModel.setCompressionRatio(100 - it.toInt())
+                                qualityRatio = 100 - it
                             }
                         }
                     }
@@ -322,7 +300,7 @@ fun ImageRender(
                         ) {
                             Column {
                                 SliderImplementation(stringResource(R.string.size)) {
-                                    imageViewModel.setResizeRatio(if(it < 1) 1 else it.toInt())
+                                    resizeRatio = if(it < 1) 1f else it
                                 }
                                 Spacer(Modifier.padding(4.dp))
                                 Text(
@@ -368,24 +346,6 @@ fun ImageInfo(
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ImageRenderPreview() {
-    Lib_image_androidTheme {
-        val context = LocalContext.current
-        val bitmap = BitmapFactory.decodeResource(context.resources,
-            R.drawable._0241226_124819)
-
-        val viewModel = remember{ ImageViewModel() }
-        viewModel.originalBitmap = bitmap
-
-        ImageRender(
-            rememberNavController(),
-            viewModel,
-        )
     }
 }
 
@@ -435,6 +395,7 @@ fun SliderImplementation(
                 onDone = {
                     textValue.toFloatOrNull()?.let { pValue ->
                         sliderPosition = pValue
+                        sliderFinishedChangedCallback(sliderPosition)
                     }
                 }
             ),
@@ -446,3 +407,22 @@ fun SliderImplementation(
         )
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun ImageRenderPreview() {
+    Lib_image_androidTheme {
+        val context = LocalContext.current
+        val bitmap = BitmapFactory.decodeResource(context.resources,
+            R.drawable._0241226_124819)
+
+        val viewModel = remember{ ImageViewModel() }
+
+        ImageRender(
+            rememberNavController(),
+            bitmap,
+            viewModel
+        ) {}
+    }
+}
+
