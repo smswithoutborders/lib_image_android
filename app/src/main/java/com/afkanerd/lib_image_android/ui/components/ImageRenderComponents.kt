@@ -7,6 +7,7 @@ import android.os.Build
 import android.telephony.SmsManager
 import android.util.Base64
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,9 +30,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,6 +50,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -76,6 +83,8 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -114,6 +123,9 @@ fun ImageRender(
     var smsCount by remember{ mutableIntStateOf(0) }
     var size by remember{ mutableIntStateOf(0) }
 
+    var showQualitySlider by remember{ mutableStateOf(false ) }
+    var showResizeSlider by remember{ mutableStateOf(false ) }
+
     LaunchedEffect(Unit) {
         if(initialize) imageViewModel.initialize()
     }
@@ -144,9 +156,7 @@ fun ImageRender(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             Column {
-                Row(
-                    Modifier.padding(16.dp)
-                ) {
+                Row( Modifier.padding(8.dp) ) {
                     FilledTonalButton(onClick = {
                         imageViewModel.reset()
                         compressionSliderPosition = 0f
@@ -154,7 +164,6 @@ fun ImageRender(
                     }, modifier = Modifier.weight(1f),) {
                         Text(
                             stringResource(R.string.reset),
-                            modifier = Modifier.padding(8.dp),
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -167,13 +176,12 @@ fun ImageRender(
                     ) {
                         Text(
                             stringResource(R.string.apply),
-                            modifier = Modifier.padding(8.dp),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
             }
         },
         topBar = {
@@ -197,7 +205,8 @@ fun ImageRender(
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
+                    .padding(8.dp)
+                    .animateContentSize(),
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -213,111 +222,7 @@ fun ImageRender(
                     )
                 }
 
-                Spacer(Modifier.padding(16.dp))
-
-                Text(
-                    stringResource(R.string.compression),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                Spacer(Modifier.padding(8.dp))
-
-                Card(
-                    colors = CardDefaults
-                        .cardColors(MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column(
-                        Modifier.padding(16.dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                stringResource(R.string.quality),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "${compressionRatio}%",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        SliderImplementation(
-                            compressionSliderPosition,
-                            sliderChangedCallback = { compressionSliderPosition = it }
-                        ) {
-                            imageViewModel.setCompressionRatio(100 - it.toInt())
-                        }
-                    }
-                }
-
-                Spacer(Modifier.padding(16.dp))
-
-                Text(
-                    stringResource(R.string.resize),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                Spacer(Modifier.padding(8.dp))
-
-                Card( colors = CardDefaults
-                    .cardColors(MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                stringResource(R.string.size),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "${resizeRatio}%",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        SliderImplementation(
-                            resizeSliderPosition,
-                            sliderChangedCallback = { resizeSliderPosition = it }
-                        ) {
-                            imageViewModel.setResizeRatio(if(it < 1) 1 else it.toInt())
-                        }
-                        Row {
-                            Text(
-                                stringResource(R.string._0),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontSize = 12.sp
-                            )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                stringResource(R.string._100),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Spacer(Modifier.padding(4.dp))
-                        Text(
-                            stringResource(R.string.aspect_ratio_is_locked_width_and_height_will_be_adjusted_proportionally),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                }
-
-                Spacer(Modifier.padding(16.dp))
+                Spacer(Modifier.padding(4.dp))
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -326,7 +231,7 @@ fun ImageRender(
                         .fillMaxWidth()
                         .padding(20.dp)
                 ) {
-                    FlowRow(maxItemsInEachRow = 3) {
+                    FlowRow(maxItemsInEachRow = 4) {
                         ImageInfo(
                             stringResource(R.string.sms_est),
                             smsCount.toString()
@@ -336,20 +241,99 @@ fun ImageRender(
                             stringResource(R.string.width),
                             (processedImage?.image?.width ?:
                             imageViewModel.originalBitmap!!.width).toString(),
-                            false
                         )
 
                         ImageInfo(
                             stringResource(R.string.height),
                             (processedImage?.image?.height ?:
                             imageViewModel.originalBitmap!!.height).toString(),
-                            false
                         )
 
                         ImageInfo(
                             stringResource(R.string.size),
                             stringResource(R.string.kb, size / 1000)
                         )
+                    }
+                }
+
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.compression),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = {
+                            showQualitySlider = !showQualitySlider
+                        }) {
+                            Icon(
+                                if(showQualitySlider) Icons.Default.ArrowDropUp else
+                                    Icons.Default.ArrowDropDown,
+                                "Drop down"
+                            )
+                        }
+                    }
+
+                    if(showQualitySlider || inPreviewMode) {
+                        Spacer(Modifier.padding(8.dp))
+
+                        Card(
+                            colors = CardDefaults
+                                .cardColors(MaterialTheme.colorScheme.surfaceContainer),
+                        ) {
+                            SliderImplementation(stringResource(R.string.quality)) {
+                                imageViewModel.setCompressionRatio(100 - it.toInt())
+                            }
+                        }
+                    }
+                }
+
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.resize),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = {
+                            showResizeSlider = !showResizeSlider
+                        }) {
+                            Icon(
+                                if(showQualitySlider) Icons.Default.ArrowDropUp else
+                                    Icons.Default.ArrowDropDown,
+                                "Drop down"
+                            )
+                        }
+                    }
+
+                    if(showResizeSlider || inPreviewMode) {
+                        Spacer(Modifier.padding(8.dp))
+
+                        Card( colors = CardDefaults
+                            .cardColors(MaterialTheme.colorScheme.surfaceContainer),
+                        ) {
+                            Column {
+                                SliderImplementation(stringResource(R.string.size)) {
+                                    imageViewModel.setResizeRatio(if(it < 1) 1 else it.toInt())
+                                }
+                                Spacer(Modifier.padding(4.dp))
+                                Text(
+                                    stringResource(R.string.aspect_ratio_is_locked_width_and_height_will_be_adjusted_proportionally),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+
                     }
                 }
             }
@@ -362,14 +346,11 @@ fun ImageRender(
 fun ImageInfo(
     title: String = "Width",
     value: String = "1344px",
-    fixedSize: Boolean = false,
 ) {
-    Column( Modifier.padding(16.dp) ) {
-        Card(Modifier.then(if(fixedSize) Modifier.size(80.dp) else Modifier)) {
+    Column( Modifier.padding(8.dp) ) {
+        Card {
             Column(
-                Modifier
-                    .then(if (fixedSize) Modifier.fillMaxSize() else Modifier)
-                    .padding(16.dp),
+                Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -382,7 +363,8 @@ fun ImageInfo(
                 Text(
                     value,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
                 )
             }
         }
@@ -411,14 +393,20 @@ fun ImageRenderPreview() {
 @Preview
 @Composable
 fun SliderImplementation(
-    sliderPosition: Float = 0f,
-    sliderChangedCallback: (Float) -> Unit = {},
+    label: String = "",
     sliderFinishedChangedCallback: (Float) -> Unit = {},
 ) {
-    Column {
+    var sliderPosition by remember{ mutableFloatStateOf(0f) }
+    var textValue by remember{ mutableStateOf(sliderPosition.toString()) }
+
+    Column(Modifier.padding(16.dp)) {
         Slider(
             value = sliderPosition,
-            onValueChange = { sliderChangedCallback(it) },
+            onValueChange = {
+                sliderPosition = it
+
+                textValue = it.toString()
+            },
             onValueChangeFinished = {
                 sliderFinishedChangedCallback(sliderPosition)
             },
@@ -433,6 +421,28 @@ fun SliderImplementation(
             steps = 100,
             valueRange = 0f..100f
         )
-    }
 
+        Spacer(Modifier.padding(4.dp))
+
+        OutlinedTextField(
+            value = textValue,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    textValue.toFloatOrNull()?.let { pValue ->
+                        sliderPosition = pValue
+                    }
+                }
+            ),
+            onValueChange = {
+                textValue = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label) },
+        )
+    }
 }
