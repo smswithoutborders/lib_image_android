@@ -84,7 +84,6 @@ fun ImageCompressionCompareRender(
         } else {
             MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
         }
-        imageViewModel.originalBitmap = bitmap
         navController.navigate(ImageRenderNav)
     }
 

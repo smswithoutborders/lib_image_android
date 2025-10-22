@@ -2,8 +2,11 @@ package com.afkanerd.lib_image_android.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import android.telephony.SmsManager
 import android.util.Base64
 import androidx.activity.compose.BackHandler
@@ -50,6 +53,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -107,17 +111,16 @@ import org.intellij.lang.annotations.JdkConstants
 @Composable
 fun ImageRender(
     navController: NavController,
-    bitmap: Bitmap,
     imageViewModel: ImageViewModel,
+    uri: Uri,
     maxNumberSms: Int = 64,
     smsCountPaddingValue: Int = 0,
     backActionCallback: () -> Unit = { navController.popBackStack() },
-    onFinishCallback: () -> Unit,
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
 
-    val processedImage by remember{ mutableStateOf<ImageViewModel.ProcessedImage?>(null) }
+    var processedImage by remember{ mutableStateOf<ImageViewModel.ProcessedImage?>(null) }
 
     var smsCount by remember{ mutableIntStateOf(0) }
     var size by remember{ mutableIntStateOf(0) }
@@ -126,15 +129,26 @@ fun ImageRender(
     var showResizeSlider by remember{ mutableStateOf(false ) }
 
     var qualityRatio by remember{ mutableFloatStateOf(100f ) }
-    var resizeRatio by remember{ mutableFloatStateOf(0f ) }
+    var resizeRatio by remember{ mutableFloatStateOf(1f ) }
+
+    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        ImageDecoder.decodeBitmap(ImageDecoder
+            .createSource(context.contentResolver, uri))
+    } else {
+        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+    }
+
+    var processing by remember{ mutableStateOf(false ) }
 
     LaunchedEffect(qualityRatio, resizeRatio) {
-        imageViewModel.compressImage(
+        processing = true
+        processedImage = imageViewModel.compressImage(
             bitmap,
             qualityRatio.toInt(),
             (bitmap.width / resizeRatio).toInt(),
             (bitmap.height / resizeRatio).toInt(),
         )
+        processing = false
     }
 
     fun getSmsCount(): Int {
@@ -172,7 +186,10 @@ fun ImageRender(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onFinishCallback ) {
+                    IconButton(onClick = {
+                        imageViewModel.processedImage = processedImage
+                        navController.popBackStack()
+                    } ) {
                         Icon(Icons.Default.Check,
                             stringResource(R.string.apply))
                     }
@@ -183,6 +200,10 @@ fun ImageRender(
         Box(Modifier
             .fillMaxSize()
             .padding(innerPadding)) {
+            if(processing || inPreviewMode) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+
+            }
             Column(
                 Modifier
                     .verticalScroll(rememberScrollState())
@@ -194,12 +215,14 @@ fun ImageRender(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Bitmap image",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(250.dp),
-                    )
+                    processedImage?.image?.asImageBitmap()?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = "Bitmap image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(250.dp),
+                        )
+                    }
                 }
 
                 Spacer(Modifier.padding(4.dp))
@@ -264,7 +287,7 @@ fun ImageRender(
                                 .cardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
                             SliderImplementation(stringResource(R.string.quality)) {
-                                qualityRatio = 100 - it
+                                qualityRatio = it
                             }
                         }
                     }
@@ -285,7 +308,7 @@ fun ImageRender(
                             showResizeSlider = !showResizeSlider
                         }) {
                             Icon(
-                                if(showQualitySlider) Icons.Default.ArrowDropUp else
+                                if(showResizeSlider) Icons.Default.ArrowDropUp else
                                     Icons.Default.ArrowDropDown,
                                 "Drop down"
                             )
@@ -299,7 +322,10 @@ fun ImageRender(
                             .cardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
                             Column {
-                                SliderImplementation(stringResource(R.string.size)) {
+                                SliderImplementation(
+                                    stringResource(R.string.size),
+                                    resizeRatio
+                                ) {
                                     resizeRatio = if(it < 1) 1f else it
                                 }
                                 Spacer(Modifier.padding(4.dp))
@@ -354,9 +380,10 @@ fun ImageInfo(
 @Composable
 fun SliderImplementation(
     label: String = "",
+    sliderPosition: Float = 100f,
     sliderFinishedChangedCallback: (Float) -> Unit = {},
 ) {
-    var sliderPosition by remember{ mutableFloatStateOf(0f) }
+    var sliderPosition by remember{ mutableFloatStateOf(sliderPosition) }
     var textValue by remember{ mutableStateOf(sliderPosition.toString()) }
 
     Column(Modifier.padding(16.dp)) {
@@ -408,21 +435,20 @@ fun SliderImplementation(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ImageRenderPreview() {
-    Lib_image_androidTheme {
-        val context = LocalContext.current
-        val bitmap = BitmapFactory.decodeResource(context.resources,
-            R.drawable._0241226_124819)
-
-        val viewModel = remember{ ImageViewModel() }
-
-        ImageRender(
-            rememberNavController(),
-            bitmap,
-            viewModel
-        ) {}
-    }
-}
-
+//@Preview(showBackground = true)
+//@Composable
+//fun ImageRenderPreview() {
+//    Lib_image_androidTheme {
+//        val context = LocalContext.current
+//        val bitmap = BitmapFactory.decodeResource(context.resources,
+//            R.drawable._0241226_124819)
+//
+//        val viewModel = remember{ ImageViewModel() }
+//
+//        ImageRender(
+//            rememberNavController(),
+//            viewModel,
+//        ) {}
+//    }
+//}
+//

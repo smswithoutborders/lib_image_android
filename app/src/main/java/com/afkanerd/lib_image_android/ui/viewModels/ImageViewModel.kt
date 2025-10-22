@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import androidx.core.graphics.scale
+import coil3.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class ImageViewModel: ViewModel() {
+    var processedImage: ProcessedImage? = null
 
     @Serializable
     data class ProcessedImage(
@@ -36,12 +38,7 @@ class ImageViewModel: ViewModel() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
                 CompressFormat.WEBP_LOSSY else CompressFormat.WEBP
     ): ProcessedImage? {
-        val bitmap = resizeImage(
-            bitmap,
-            qualityRatio,
-            width,
-            height
-        )
+        val bitmap = bitmap.scale( width, height, false )
         val byteArrayOutputStream = ByteArrayOutputStream()
         if(bitmap.compress( compressFormat, qualityRatio, byteArrayOutputStream)) {
             val image =  byteArrayToBitmap( byteArrayOutputStream.toByteArray())
@@ -67,18 +64,4 @@ class ImageViewModel: ViewModel() {
                 options
             )
     }
-
-    fun resizeImage(
-        bitmap: Bitmap,
-        ratio: Int,
-        width: Int,
-        height: Int
-    ): Bitmap {
-        return bitmap.scale(
-            width / ratio,
-            height / ratio,
-            false
-        )
-    }
-
 }

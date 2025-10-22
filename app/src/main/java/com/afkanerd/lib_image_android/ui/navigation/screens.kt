@@ -8,5 +8,6 @@ data object ImageRenderHomeNav
 
 @Serializable
 data class ImageRenderNav(
-    var initialize: Boolean = true
+    val uri: String,
+    val smsCountPadding: Int = 0,
 )
