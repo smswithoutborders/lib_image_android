@@ -101,12 +101,19 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.afkanerd.lib_image_android.R
+import com.afkanerd.lib_image_android.extensions.getUriForDrawable
 import com.afkanerd.lib_image_android.ui.ImageMainView
 import com.afkanerd.lib_image_android.ui.theme.Lib_image_androidTheme
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.intellij.lang.annotations.JdkConstants
 
+/**
+ * imageViewModel: Used to manage the image states.
+ * uri: The Uri for the image to be edited.
+ * maxNumberSms: The maximum amount of SMS count that should be achieved while editing the images.
+ * smsCountPaddingValue: This values is added to the amount of SMS count (in cases of encryption of overhead you can use this value to add to the number of SMS counts).
+ */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ImageRender(
@@ -131,7 +138,9 @@ fun ImageRender(
     var qualityRatio by remember{ mutableFloatStateOf(100f ) }
     var resizeRatio by remember{ mutableFloatStateOf(1f ) }
 
-    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    val bitmap = if(inPreviewMode) BitmapFactory
+        .decodeResource(context.resources, R.drawable._0241226_124819)
+    else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         ImageDecoder.decodeBitmap(ImageDecoder
             .createSource(context.contentResolver, uri))
     } else {
@@ -215,9 +224,10 @@ fun ImageRender(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    processedImage?.image?.asImageBitmap()?.let {
+                    if(inPreviewMode || processedImage?.image?.asImageBitmap() != null){
                         Image(
-                            bitmap = it,
+                            bitmap = if(inPreviewMode) bitmap.asImageBitmap() else
+                                processedImage!!.image!!.asImageBitmap(),
                             contentDescription = "Bitmap image",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.size(250.dp),
@@ -435,20 +445,16 @@ fun SliderImplementation(
     }
 }
 
-//@Preview(showBackground = true)
-//@Composable
-//fun ImageRenderPreview() {
-//    Lib_image_androidTheme {
-//        val context = LocalContext.current
-//        val bitmap = BitmapFactory.decodeResource(context.resources,
-//            R.drawable._0241226_124819)
-//
-//        val viewModel = remember{ ImageViewModel() }
-//
-//        ImageRender(
-//            rememberNavController(),
-//            viewModel,
-//        ) {}
-//    }
-//}
-//
+@Preview(showBackground = true)
+@Composable
+fun ImageRenderPreview() {
+    Lib_image_androidTheme {
+        val viewModel = remember{ ImageViewModel() }
+        ImageRender(
+            rememberNavController(),
+            viewModel,
+            uri = "".toUri(),
+        ) {}
+    }
+}
+
