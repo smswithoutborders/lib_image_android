@@ -6,13 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat.enableEdgeToEdge
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.afkanerd.lib_image_android.ui.ImageMainView
+import com.lib_image_android.app.views.ImageMainView
 import com.afkanerd.lib_image_android.ui.ImageRender
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.lib_image_android.app.navigation.ImageRenderHomeNav

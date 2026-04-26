@@ -1,4 +1,4 @@
-package com.afkanerd.lib_image_android.ui
+package com.lib_image_android.app.views
 
 import android.content.Intent
 import android.graphics.ImageDecoder
@@ -19,15 +19,13 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
+import com.lib_image_android.app.navigation.ImageRenderNav
 
 
 @Composable
@@ -61,7 +59,9 @@ fun ImageCompressionCompareRender(
         } else {
             MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
         }
-//        navController.navigate(ImageRenderNav)
+        navController.navigate(ImageRenderNav(
+            uri = uri.toString(),
+        ))
     }
 
     Column(

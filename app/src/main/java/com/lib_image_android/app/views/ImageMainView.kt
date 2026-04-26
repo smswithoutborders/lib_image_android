@@ -1,6 +1,5 @@
-package com.afkanerd.lib_image_android.ui
+package com.lib_image_android.app.views
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -8,11 +7,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 
 @Composable

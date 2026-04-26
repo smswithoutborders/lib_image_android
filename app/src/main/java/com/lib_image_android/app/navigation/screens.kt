@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import kotlinx.serialization.Serializable
 
 @Serializable
-data object ImageRenderHomeNav
+object ImageRenderHomeNav
 
 @Serializable
 data class ImageRenderNav(
