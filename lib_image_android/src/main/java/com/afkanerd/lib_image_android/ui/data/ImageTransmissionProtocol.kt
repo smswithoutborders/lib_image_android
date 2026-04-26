@@ -55,7 +55,7 @@ data class ImageTransmissionProtocol(
             address: String,
             subscriptionId: Long,
         ): Operation {
-            val constraints : Constraints = Constraints.Builder()
+            val constraints: Constraints = Constraints.Builder()
                 .build();
 
             val workManager = WorkManager.getInstance(context)
@@ -77,15 +77,22 @@ data class ImageTransmissionProtocol(
                     WorkRequest.MIN_BACKOFF_MILLIS,
                     TimeUnit.MILLISECONDS
                 )
-                .setInputData(Data.Builder()
-                    .putInt(SmsWorkManager.ITP_SERVICE_ICON, logo)
-                    .putByte(SmsWorkManager.ITP_VERSION, version)
-                    .putByte(SmsWorkManager.ITP_SESSION_ID, sessionId)
-                    .putByteArray(SmsWorkManager.ITP_IMAGE_LENGTH, imageLength.toLittleEndianBytes())
-                    .putByteArray(SmsWorkManager.ITP_TEXT_LENGTH, textLength.toLittleEndianBytes())
-                    .putString(SmsWorkManager.ITP_TRANSMISSION_ADDRESS, address)
-                    .putLong(SmsWorkManager.ITP_TRANSMISSION_SUBSCRIPTION_ID, subscriptionId)
-                    .build()
+                .setInputData(
+                    Data.Builder()
+                        .putInt(SmsWorkManager.ITP_SERVICE_ICON, logo)
+                        .putByte(SmsWorkManager.ITP_VERSION, version)
+                        .putByte(SmsWorkManager.ITP_SESSION_ID, sessionId)
+                        .putByteArray(
+                            SmsWorkManager.ITP_IMAGE_LENGTH,
+                            imageLength.toLittleEndianBytes()
+                        )
+                        .putByteArray(
+                            SmsWorkManager.ITP_TEXT_LENGTH,
+                            textLength.toLittleEndianBytes()
+                        )
+                        .putString(SmsWorkManager.ITP_TRANSMISSION_ADDRESS, address)
+                        .putLong(SmsWorkManager.ITP_TRANSMISSION_SUBSCRIPTION_ID, subscriptionId)
+                        .build()
                 )
                 .addTag(SmsWorkManager.IMAGE_TRANSMISSION_WORK_MANAGER_TAG)
                 .build();
@@ -94,7 +101,8 @@ data class ImageTransmissionProtocol(
 
             return workManager.enqueueUniqueWork(
                 "${SmsWorkManager}.IMAGE_TRANSMISSION_WORK_MANAGER_TAG.${
-                    System.currentTimeMillis()}",
+                    System.currentTimeMillis()
+                }",
                 ExistingWorkPolicy.KEEP,
                 remoteListenersListenerWorker
             )
@@ -104,7 +112,7 @@ data class ImageTransmissionProtocol(
         suspend fun getTransmissionIndex(
             context: Context,
             sessionId: Byte,
-        ) : Int? {
+        ): Int? {
             val key = intPreferencesKey("session_index_$sessionId")
             return context.dataStore.data.firstOrNull()?.get(key)
         }
@@ -134,7 +142,7 @@ data class ImageTransmissionProtocol(
         suspend fun getCacheImage(
             context: Context,
             sessionId: Byte,
-        ) : ByteArray? {
+        ): ByteArray? {
             val key = byteArrayPreferencesKey("session_index_image_$sessionId")
             return context.dataStore.data.first()[key]
         }
@@ -147,11 +155,11 @@ data class ImageTransmissionProtocol(
             context.dataStore.edit { it.remove(key) }
         }
 
-        suspend fun getItpSession(context: Context) : Int {
+        suspend fun getItpSession(context: Context): Int {
             val sessionId = intPreferencesKey("session_id")
             context.dataStore.edit { session ->
                 val currentSession = session[sessionId] ?: 0
-                session[sessionId] = if(currentSession >=255) 0 else currentSession + 1
+                session[sessionId] = if (currentSession >= 255) 0 else currentSession + 1
             }
             return context.dataStore.data.first()[sessionId]!!
         }
@@ -178,7 +186,7 @@ data class ImageTransmissionProtocol(
             do {
                 var metaData: ByteArray = byteArrayOf(version, sessionId, segmentNumber)
 
-                if(segmentNumber.toInt() == 0) {
+                if (segmentNumber.toInt() == 0) {
                     metaData += byteArrayOf(numberOfSegments) + imageLength + textLength
                 }
 
@@ -186,9 +194,11 @@ data class ImageTransmissionProtocol(
                     .coerceAtMost(encodedPayload.size)
 
                 val buffer = Base64.encodeToString(metaData, Base64.NO_WRAP) +
-                        String(encodedPayload.take(size).toByteArray(),
-                    StandardCharsets.UTF_8)
-                if(buffer.length > STANDARD_SEGMENT_SIZE) {
+                        String(
+                            encodedPayload.take(size).toByteArray(),
+                            StandardCharsets.UTF_8
+                        )
+                if (buffer.length > STANDARD_SEGMENT_SIZE) {
                     throw Exception("Buffer size > $STANDARD_SEGMENT_SIZE --> ${buffer.length}")
                 }
                 encodedPayload = encodedPayload.drop(size).toByteArray()
@@ -196,105 +206,10 @@ data class ImageTransmissionProtocol(
                 segmentNumber = (segmentNumber.toInt() + 1).toByte()
 
                 dividedImage.add(buffer)
-            } while(encodedPayload.isNotEmpty())
+            } while (encodedPayload.isNotEmpty())
 
             return dividedImage
         }
 
-//        @Throws
-//        fun extractImageContent(
-//            payload: ByteArray,
-//        ): ImageTransmissionProtocol? {
-//            if(!payload.take(14).toByteArray().isHexBytes())
-//                return null
-//
-//            var payload = payload
-//            val firstSegmentMetaDataSize = 14
-//            val laterSegmentMetaDataSize = 6
-//
-//            val listItp = mutableListOf<Pair<ImageTransmissionProtocol, String>>()
-//
-//            var segNumber = 0
-//            do {
-//                val size = (STANDARD_SEGMENT_SIZE -
-//                        if(segNumber == 0) firstSegmentMetaDataSize else laterSegmentMetaDataSize)
-//                    .coerceAtMost(payload.size)
-//                val content = payload.take(size).also {
-//                    payload = payload.drop(size).toByteArray()
-//                }
-//                parseImageContent(content.toByteArray())?.let {
-//                    listItp.add(it)
-//                }
-//                segNumber += 1
-//            } while(payload.isNotEmpty())
-//
-//            val version = listItp.first().first.version
-//            val sessionId = listItp.first().first.sessionId
-//            val numberSegments = listItp.first().first.numberSegments
-//            val imageLength = listItp.first().first.imageLength
-//            val textLength = listItp.first().first.textLength
-//
-//            if(listItp.size != numberSegments.toInt()) {
-//                throw Exception("Composed list not equal expected segments: " +
-//                        "${listItp.size} != $numberSegments")
-//            }
-//
-//            var imagePayloadString = ""
-//            listItp.forEach { imagePayloadString += it }
-//
-//            var imageTextPayload = Base64.decode(imagePayloadString, Base64.DEFAULT)
-//
-//            val image = imageTextPayload.take(imageLength.toInt()).also {
-//                imageTextPayload = imageTextPayload.drop(imageLength.toInt()).toByteArray()
-//            }
-//            val text = imageTextPayload.take(textLength.toInt())
-//
-//            return ImageTransmissionProtocol(
-//                version = version,
-//                sessionId = sessionId,
-//                segNumber = 0,
-//                numberSegments = numberSegments,
-//                imageLength = imageLength,
-//                textLength = textLength,
-//                image = image.toByteArray(),
-//                text = text.toByteArray()
-//            )
-//        }
-
-//        private fun parseImageContent(content: ByteArray): Pair<ImageTransmissionProtocol, String>? {
-//            val headers = content.take(8).toByteArray()
-//            var stringContent = String(headers, StandardCharsets.UTF_8)
-//            val version = stringContent.take(2).toInt(16).also {
-//                stringContent = stringContent.drop(2)
-//            }
-//            val sessionId = stringContent.take(2).toInt(16).also {
-//                stringContent = stringContent.drop(2)
-//            }
-//
-//            var segNumber = 0
-//            var numberSegments = 0
-//
-//            val imageLength = if(segNumber == 0) stringContent.take(4).toUShort(16).toShort().also {
-//                stringContent = stringContent.drop(4)
-//            } else 0
-//
-//            val textLength = if(segNumber == 0) stringContent.take(4).toUShort(16).toShort().also {
-//                stringContent = stringContent.drop(4)
-//            } else 0
-//
-//            return Pair(ImageTransmissionProtocol(
-//                version = version.toByte(),
-//                sessionId = sessionId.toByte(),
-//                segNumber = segNumber,
-//                numberSegments = numberSegments,
-//                imageLength = imageLength,
-//                textLength = textLength,
-//                image = byteArrayOf(),
-//                text = byteArrayOf()
-//            ), stringContent)
-//        }
-
-
     }
-
 }

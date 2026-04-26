@@ -156,21 +156,9 @@ class ImageTransmissionService : Service() {
 
             startForeground(notificationId, notification)
 
-            sendMessage(
-                address = address,
-                subscriptionId = subscriptionId,
-                transmissionIndex = transmissionIndex
-            )
+            TODO("Implement the required callback function here")
         }
         return START_STICKY
-    }
-
-    fun sendMessage(
-        address: String,
-        subscriptionId: Long,
-        transmissionIndex: Int,
-    ) {
-        TODO()
     }
 
     private fun createForegroundNotification(
@@ -316,7 +304,7 @@ class ImageTransmissionService : Service() {
         subscriptionId: Long,
     ) {
         val intentFilter = IntentFilter()
-        intentFilter.addAction(TODO())
+        intentFilter.addAction("") // TODO("This used to listen for incoming sms")
         messageStateChangedBroadcast = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action != null &&
@@ -346,11 +334,7 @@ class ImageTransmissionService : Service() {
                                 WorkInfo.State.RUNNING -> {
                                     println("Sending new message: $transmissionIndex")
 
-                                    sendMessage(
-                                        address = address,
-                                        subscriptionId = subscriptionId,
-                                        transmissionIndex = transmissionIndex,
-                                    )
+                                    TODO("Implement the required callback function here")
 
                                     val notification = createForegroundNotification(
                                         intent,
