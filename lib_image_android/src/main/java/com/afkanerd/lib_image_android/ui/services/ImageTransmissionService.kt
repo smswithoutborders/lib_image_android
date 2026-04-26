@@ -297,6 +297,9 @@ class ImageTransmissionService : Service() {
         stopSelf()
     }
 
+    /**
+     * This is an indicator for iterating through the transmissions
+     */
     private fun handleBroadcast(
         sessionId: Byte,
         icon: Int,
