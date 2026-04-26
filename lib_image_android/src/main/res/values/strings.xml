@@ -19,4 +19,20 @@
     <string name="of_sent">%1$d of %2$d sent...</string>
     <string name="stop">Stop</string>
     <string name="pause">Pause</string>
+
+    <string name="foreground_service_failed_channel_description">Click to reconnect Gateway clients</string>
+    <string name="foreground_service_failed_channel_name" translatable="false">Gateway clients auto-reconnect</string>
+    <string name="foreground_service_image_transmission_descriptions">Image transmission via SMS</string>
+    <string name="foreground_service_image_transmission_notification_id" translatable="false">4</string>
+    <string name="foreground_service_failed_channel_id" translatable="false">@string/foreground_service_failed_channel_name</string>
+    <string name="foreground_service_image_transmission_channel_name" translatable="false">Image Transmission</string>
+    <string name="foreground_service_image_transmission_channel_id" translatable="false">@string/foreground_service_image_transmission_channel_name</string>
+
+    <string name="sending_stop">Sending stopped…</string>
+    <string name="waiting_to_send_of">Waiting to send %1$d of %2$d</string>
+    <string name="failed_to_send_message">Failed to send message</string>
+    <string name="retry">Retry</string>
+    <string name="queued_for_sending">Queued for sending…</string>
+    <string name="will_resume_sending_shortly">Will resume sending shortly…</string>
+    <string name="message_failed_notifications_descriptions">Get notifications when messages fail</string>
 </resources>
