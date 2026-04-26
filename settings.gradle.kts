@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "lib_image_android"
+include(":lib_image_android")
 include(":app")
- 

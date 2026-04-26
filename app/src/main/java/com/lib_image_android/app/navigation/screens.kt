@@ -1,4 +1,4 @@
-package com.afkanerd.lib_image_android.ui.navigation
+package com.lib_image_android.app.navigation
 
 import android.graphics.Bitmap
 import kotlinx.serialization.Serializable

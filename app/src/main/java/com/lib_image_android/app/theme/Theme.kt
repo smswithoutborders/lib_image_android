@@ -1,6 +1,5 @@
-package com.afkanerd.lib_image_android.ui.theme
+package com.lib_image_android.app.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

@@ -1,4 +1,4 @@
-package com.afkanerd.lib_image_android.ui.theme
+package com.lib_image_android.app.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package com.afkanerd.lib_image_android.extensions
+package com.lib_image_android.app.extensions
 
 import android.content.Context
 import android.net.Uri
