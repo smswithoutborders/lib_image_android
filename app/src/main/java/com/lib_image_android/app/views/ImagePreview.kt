@@ -68,6 +68,8 @@ fun ImagePreview(
         navController.popBackStack()
     }
 
+    val notificationFilter = "com.afkanerd.message_sent_broadcast"
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -79,6 +81,7 @@ fun ImagePreview(
                 subscriptionId = -1,
                 textLength = 10,
                 formattedPayload = ByteArray(140*60),
+                notificationFilter = notificationFilter
             )
         } else {
             // Permission denied, handle accordingly.
@@ -113,6 +116,7 @@ fun ImagePreview(
                                 subscriptionId = -1,
                                 textLength = 10,
                                 formattedPayload = ByteArray(140*60),
+                                notificationFilter = notificationFilter
                             )
                         }
                     } ) {

@@ -1,10 +1,13 @@
 package com.afkanerd.lib_image_android.ui.viewModels
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.IBinder
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
@@ -24,6 +27,7 @@ import androidx.work.WorkRequest
 import com.afkanerd.lib_image_android.ui.data.ImageTransmissionNotification
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.extensions.toLittleEndianBytes
+import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +41,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class ImageViewModel: ViewModel() {
+
     private val STANDARD_SEGMENT_SIZE = 153
     private val STANDARD_ENCODED_HEADER_SIZE = 12
 
@@ -103,6 +108,7 @@ class ImageViewModel: ViewModel() {
         textLength: Short,
         address: String,
         formattedPayload: ByteArray,
+        notificationFilter: String,
         subscriptionId: Long? = -1,
         logo: Int? = null,
     ) {
@@ -151,6 +157,7 @@ class ImageViewModel: ViewModel() {
                             textLength.toLittleEndianBytes()
                         )
                         .putString(SmsWorkManager.ITP_TRANSMISSION_ADDRESS, address)
+                        .putString(SmsWorkManager.ITP_NOTIFICATION_FILTER, notificationFilter)
 //                    .putLong(SmsWorkManager.ITP_TRANSMISSION_SUBSCRIPTION_ID, subscriptionId)
                         .build()
                 )

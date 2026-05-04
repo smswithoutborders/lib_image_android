@@ -1,7 +1,7 @@
 package com.lib_image_android.app
 
+import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -11,17 +11,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.lib_image_android.app.views.ImageMainView
+import com.afkanerd.lib_image_android.ui.BindActivity
 import com.afkanerd.lib_image_android.ui.ImageRender
+import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.lib_image_android.app.navigation.ImagePreviewNav
 import com.lib_image_android.app.navigation.ImageRenderHomeNav
 import com.lib_image_android.app.navigation.ImageRenderNav
 import com.lib_image_android.app.theme.Lib_image_androidTheme
+import com.lib_image_android.app.views.ImageMainView
 import com.lib_image_android.app.views.ImagePreview
-import kotlin.getValue
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BindActivity() {
     lateinit var navController: NavHostController
 
     val imageViewModel: ImageViewModel by viewModels()
@@ -51,6 +52,14 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             imageViewModel = imageViewModel,
                             uri = imageRenderNav.uri.toUri(),
+                            imageService = imageTransmissionService,
+                            imageTransmissionCallback = {
+                                Thread.sleep(5000)
+                                val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
+                                    putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
+                                }
+                                sendBroadcast(intent)
+                            },
                             onApplyCallback = {
                                 navController.navigate(ImagePreviewNav) {
                                     popUpTo(navController.graph.startDestinationId) {

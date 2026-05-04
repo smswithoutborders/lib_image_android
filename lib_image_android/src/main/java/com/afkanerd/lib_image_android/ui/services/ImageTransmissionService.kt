@@ -1,6 +1,7 @@
 package com.afkanerd.lib_image_android.ui.services
 
 import android.Manifest
+import android.R.attr.version
 import android.app.Activity
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -47,6 +48,7 @@ import kotlin.jvm.java
 import kotlin.uuid.Uuid
 
 class ImageTransmissionService : Service() {
+    lateinit var workManager: WorkManager
     val imageViewModel = ImageViewModel()
     private lateinit var dividedMessages: MutableList<String>
     private lateinit var messageStateChangedBroadcast: BroadcastReceiver
@@ -55,45 +57,45 @@ class ImageTransmissionService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var workState: WorkInfo.State
 
-    override fun onBind(intent: Intent?): IBinder? {
-        TODO("Implement binder")
+    private var runtimeExecution: (() -> Unit)? = null
+
+    // Binder given to clients.
+    private val binder = LocalBinder()
+
+    fun setRemoteExecutionCallback(callback: () -> Unit) {
+        runtimeExecution = callback
+    }
+
+    /**
+     * Class used for the client Binder. Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with IPC.
+     */
+    inner class LocalBinder : Binder() {
+        // Return this instance of LocalService so clients can call public methods.
+        fun getService(): ImageTransmissionService = this@ImageTransmissionService
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        return binder
     }
 
     override fun onCreate() {
         super.onCreate()
+        workManager  = WorkManager.getInstance(applicationContext)
         notificationManager = getSystemService(NOTIFICATION_SERVICE)
         as NotificationManager
         notificationId = getString(
             R.string.foreground_service_image_transmission_notification_id).toInt()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val address  = intent?.getStringExtra(SmsWorkManager.ITP_TRANSMISSION_ADDRESS)
-            ?: return START_NOT_STICKY
-
-        val version  = intent.getByteExtra(SmsWorkManager.ITP_VERSION, -1)
-            .also { if(it.toInt() == -1) return START_NOT_STICKY }
-
-        val imageLength  = intent.getByteArrayExtra(SmsWorkManager.ITP_IMAGE_LENGTH).also {
-            if(it == null) return START_NOT_STICKY }
-
-        val textLength  = intent.getByteArrayExtra(SmsWorkManager.ITP_TEXT_LENGTH).also {
-            if(it == null) return START_NOT_STICKY }
-
-        val sessionId  = intent.getByteExtra(SmsWorkManager.ITP_SESSION_ID, -1)
-
-        val icon = intent.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
-        val subscriptionId = intent.getLongExtra(
-            SmsWorkManager
-            .ITP_TRANSMISSION_SUBSCRIPTION_ID, -1)
-
-        val workId = intent.getStringExtra(SmsWorkManager.ITP_WORK_MANAGER_UUID)
-
+    private fun workflowWatch(
+        intent: Intent,
+        workId: String?,
+        sessionId: Byte,
+        icon: Int,
+    ) {
         CoroutineScope(Dispatchers.Default).launch {
-            val workIdUuid = UUID.fromString(workId)
-            val workManager = WorkManager.getInstance(applicationContext)
-            workManager
-                .getWorkInfoByIdFlow(workIdUuid)
+            workManager.getWorkInfoByIdFlow(UUID.fromString(workId))
                 .collect { workInfo ->
                     workState = workInfo!!.state
 
@@ -113,13 +115,6 @@ class ImageTransmissionService : Service() {
                         }
                         WorkInfo.State.CANCELLED,
                         WorkInfo.State.SUCCEEDED -> {
-//                            if(::messageStateChangedBroadcast.isInitialized) {
-//                                try {
-//                                    unregisterReceiver(messageStateChangedBroadcast)
-//                                } catch(e: IllegalArgumentException) {
-//                                    e.printStackTrace()
-//                                }
-//                            }
                             stopSelf()
                         }
                         else -> {}
@@ -127,13 +122,48 @@ class ImageTransmissionService : Service() {
                 }
         }
 
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val address  = intent?.getStringExtra(SmsWorkManager.ITP_TRANSMISSION_ADDRESS)
+            ?: return START_NOT_STICKY
+
+        val version  = intent.getByteExtra(SmsWorkManager.ITP_VERSION, -1)
+        if(version.toInt() == -1) return START_NOT_STICKY
+
+        val imageLength =
+            intent.getByteArrayExtra(SmsWorkManager.ITP_IMAGE_LENGTH) ?:
+            throw Exception("Failed to find ${SmsWorkManager.ITP_IMAGE_LENGTH}")
+
+        val textLength =
+            intent.getByteArrayExtra(SmsWorkManager.ITP_TEXT_LENGTH) ?:
+            throw Exception("Failed to find ${SmsWorkManager.ITP_TEXT_LENGTH}")
+
+        val sessionId  = intent.getByteExtra(SmsWorkManager.ITP_SESSION_ID, -1)
+
+        val icon = intent.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
+        val notificationFilters = intent
+            .getStringExtra(SmsWorkManager.ITP_NOTIFICATION_FILTER) ?:
+            throw Exception("Failed to find ${SmsWorkManager.ITP_NOTIFICATION_FILTER}")
+
+        val subscriptionId = intent.getLongExtra(
+            SmsWorkManager
+            .ITP_TRANSMISSION_SUBSCRIPTION_ID, -1)
+
+        val workId = intent.getStringExtra(SmsWorkManager.ITP_WORK_MANAGER_UUID)
+        workflowWatch(
+            intent = intent,
+            workId = workId,
+            sessionId = sessionId,
+            icon = icon
+        )
+
         // This is the continuation
         if(!::messageStateChangedBroadcast.isInitialized) {
             handleBroadcast(
                 sessionId = sessionId,
-                address = address,
-                subscriptionId = subscriptionId,
                 icon = icon,
+                notificationFilters = notificationFilters
             )
         }
 
@@ -145,8 +175,8 @@ class ImageTransmissionService : Service() {
                 payload,
                 version,
                 sessionId,
-                imageLength!!,
-                textLength!!
+                imageLength,
+                textLength
             ).apply {
                 val header = Base64.decode(this[0].take(12), Base64.DEFAULT)
                 header[3] = this.size.toByte()
@@ -166,29 +196,9 @@ class ImageTransmissionService : Service() {
             startForeground(notificationId, notification)
 
             // This is the beginning
-//            TODO("Implement the required callback function here")
+            runtimeExecution?.invoke()
         }
         return START_STICKY
-    }
-
-    private fun createForegroundNotification() {
-        with(NotificationManagerCompat.from(applicationContext)) {
-            if (ActivityCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // TODO: Consider calling ActivityCompat#requestPermissions here
-                // to request the missing permissions, and then overriding
-                // public fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>,
-                //                                        grantResults: IntArray)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-
-                return@with
-            }
-            // notificationId is a unique int for each notification that you must define.
-        }
     }
 
     private fun createForegroundNotification(
@@ -335,69 +345,57 @@ class ImageTransmissionService : Service() {
     private fun handleBroadcast(
         sessionId: Byte,
         icon: Int,
-        address: String,
-        subscriptionId: Long,
+        notificationFilters: String,
     ) {
         val intentFilter = IntentFilter()
-        intentFilter.addAction("") // TODO("This used to listen for incoming sms")
+        intentFilter.addAction(notificationFilters)
         messageStateChangedBroadcast = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action != null &&
                     intentFilter.hasAction(intent.action) &&
                     intent.hasExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST)
                 ) {
-                    if (resultCode == Activity.RESULT_OK) {
-                        CoroutineScope(Dispatchers.Default).launch {
-                            var transmissionIndex = imageViewModel
-                                .getTransmissionIndex(applicationContext, sessionId) ?: 0
+                    CoroutineScope(Dispatchers.Default).launch {
+                        var transmissionIndex = imageViewModel
+                            .getTransmissionIndex(applicationContext, sessionId) ?: 0
 
-                            transmissionIndex += 1
-                            if(transmissionIndex >= dividedMessages.size) {
-                                sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
-                                return@launch
-                            }
+                        var isRetry = false
 
-                            imageViewModel.storeTransmissionSessionIndex(
-                                context = applicationContext,
-                                sessionId = sessionId,
-                                index = transmissionIndex
-                            )
-                            Thread.sleep(5000)
-
-                            when(workState) {
-                                WorkInfo.State.ENQUEUED,
-                                WorkInfo.State.RUNNING -> {
-                                    println("Sending new message: $transmissionIndex")
-
-                                    TODO("Implement the required callback function here")
-
-                                    val notification = createForegroundNotification(
-                                        intent,
-                                        icon = icon,
-                                        progress = transmissionIndex,
-                                        maxProgress = dividedMessages.size,
-                                    ).notification
-
-                                    notificationManager.notify(notificationId, notification)
+                        when(resultCode) {
+                            Activity.RESULT_OK -> {
+                                transmissionIndex += 1
+                                if (transmissionIndex >= dividedMessages.size) {
+                                    sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
+                                    return@launch
                                 }
-                                else -> {}
-                            }
-                        }
-                    } else {
-                        CoroutineScope(Dispatchers.Default).launch {
-                            val transmissionIndex = imageViewModel
-                                .getTransmissionIndex(applicationContext, sessionId) ?: return@launch
 
-                            val notification = createForegroundNotification(
-                                intent,
-                                icon = icon,
-                                progress = transmissionIndex,
-                                maxProgress = dividedMessages.size,
-                                isRetry = true
-                            ).notification
+                                imageViewModel.storeTransmissionSessionIndex(
+                                    context = applicationContext,
+                                    sessionId = sessionId,
+                                    index = transmissionIndex
+                                )
 
-                            notificationManager.notify(notificationId, notification)
+                                Thread.sleep(5000)
+
+                                when (workState) {
+                                    WorkInfo.State.ENQUEUED,
+                                    WorkInfo.State.RUNNING -> {
+                                        runtimeExecution?.invoke()
+                                    }
+                                    else -> {}
+                                }
+                            } else -> isRetry = true
                         }
+
+                        val notification = createForegroundNotification(
+                            intent,
+                            icon = icon,
+                            progress = transmissionIndex,
+                            maxProgress = dividedMessages.size,
+                            isRetry = isRetry,
+                        ).notification
+
+                        notificationManager.notify(notificationId, notification)
                     }
                 }
             }
@@ -411,12 +409,12 @@ class ImageTransmissionService : Service() {
         )
     }
 
-    override fun onDestroy() {
-        if(::messageStateChangedBroadcast.isInitialized) {
-            unregisterReceiver(messageStateChangedBroadcast)
-        }
-        super.onDestroy()
-    }
+//    override fun onDestroy() {
+//        if(::messageStateChangedBroadcast.isInitialized) {
+//            unregisterReceiver(messageStateChangedBroadcast)
+//        }
+//        super.onDestroy()
+//    }
 
 
 }

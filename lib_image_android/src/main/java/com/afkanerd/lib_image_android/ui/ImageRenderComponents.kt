@@ -70,6 +70,8 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
+import com.afkanerd.lib_image_android.ui.extensions.getActivity
+import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 
 /**
@@ -86,6 +88,8 @@ fun ImageRender(
     uri: Uri,
     maxNumberSms: Int = 64,
     smsCountPaddingValue: Int = 0,
+    imageService: ImageTransmissionService,
+    imageTransmissionCallback: () -> Unit,
     onApplyCallback: () -> Unit,
     backActionCallback: () -> Unit = { navController.popBackStack() },
 ) {
@@ -162,7 +166,10 @@ fun ImageRender(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onApplyCallback ) {
+                    IconButton(onClick = {
+                        imageService.setRemoteExecutionCallback(imageTransmissionCallback)
+                        onApplyCallback()
+                    } ) {
                         Icon(Icons.Default.Check,
                             stringResource(R.string.apply))
                     }
@@ -419,6 +426,8 @@ fun ImageMainView() {
         navController = rememberNavController(),
         imageViewModel = remember { ImageViewModel() },
         uri = uri,
-        onApplyCallback = {}
+        imageTransmissionCallback = {},
+        onApplyCallback = {},
+        imageService = ImageTransmissionService()
     )
 }
