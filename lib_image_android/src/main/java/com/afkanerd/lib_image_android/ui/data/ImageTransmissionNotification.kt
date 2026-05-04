@@ -6,9 +6,24 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat.getSystemService
 import com.afkanerd.lib_image_android.R
 
-object Notifications {
+object ImageTransmissionNotification {
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun createNotificationChannel(context: Context, ) {
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        createImageTransmissionChannel(
+            context,
+            notificationManager,
+        )
+        createNotificationChannelFailedMessages(
+            context,
+            notificationManager
+        )
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createImageTransmissionChannel(

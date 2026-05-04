@@ -14,9 +14,11 @@ import androidx.navigation.toRoute
 import com.lib_image_android.app.views.ImageMainView
 import com.afkanerd.lib_image_android.ui.ImageRender
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
+import com.lib_image_android.app.navigation.ImagePreviewNav
 import com.lib_image_android.app.navigation.ImageRenderHomeNav
 import com.lib_image_android.app.navigation.ImageRenderNav
 import com.lib_image_android.app.theme.Lib_image_androidTheme
+import com.lib_image_android.app.views.ImagePreview
 import kotlin.getValue
 
 class MainActivity : ComponentActivity() {
@@ -48,7 +50,21 @@ class MainActivity : ComponentActivity() {
                         ImageRender(
                             navController = navController,
                             imageViewModel = imageViewModel,
-                            uri = imageRenderNav.uri.toUri()
+                            uri = imageRenderNav.uri.toUri(),
+                            onApplyCallback = {
+                                navController.navigate(ImagePreviewNav) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        inclusive = true // Set to true to also remove the root screen
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    composable<ImagePreviewNav>{
+                        ImagePreview(
+                            navController = navController,
+                            imageViewModel = imageViewModel
                         )
                     }
                 }

@@ -13,6 +13,7 @@ import androidx.work.Data
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
+import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.afkanerd.smswithoutborders_libsmsmms.data.ImageTransmissionProtocol
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,8 @@ class SmsWorkManager(
     context: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams ) {
+    val imageViewModel = ImageViewModel()
+
     override suspend fun doWork(): Result = suspendCancellableCoroutine { cont ->
         val address = inputData.getString(ITP_TRANSMISSION_ADDRESS)
         if(address == null) {
@@ -42,17 +45,7 @@ class SmsWorkManager(
         val subscriptionId = inputData.getLong(ITP_TRANSMISSION_SUBSCRIPTION_ID,
             -1)
 
-        val icon = inputData.getInt(ITP_SERVICE_ICON, -1).also {
-            if(it == -1) {
-                cont.resume(
-                    Result.failure(
-                        Data.Builder().putString("reason", "ITP_SERVICE_ICON null")
-                            .build()
-                    )
-                )
-                return@suspendCancellableCoroutine
-            }
-        }
+        val icon = inputData.getInt(ITP_SERVICE_ICON, -1)
 
         val version = inputData.getByte(ITP_VERSION, -1).also {
             if(it.toInt() == -1) {
@@ -144,8 +137,8 @@ class SmsWorkManager(
                 } catch(e: Exception) {
                     e.printStackTrace()
                 } finally {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        ImageTransmissionProtocol.clearImageCache(applicationContext, sessionId)
+                    CoroutineScope(Dispatchers.Default).launch {
+                        imageViewModel.clearImageCache(applicationContext, sessionId)
                     }
                 }
             }

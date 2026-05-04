@@ -11,6 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
+import com.lib_image_android.app.theme.Lib_image_androidTheme
 
 @Composable
 fun ImageMainView(
@@ -33,7 +34,9 @@ fun ImageMainView(
 
 @Preview
 @Composable
-fun ImageMainView() {
-    ImageMainView(rememberNavController(),
-        remember{ ImageViewModel() })
+fun ImageMainView_Prevew() {
+    Lib_image_androidTheme() {
+        ImageMainView(rememberNavController(),
+            remember{ ImageViewModel() })
+    }
 }

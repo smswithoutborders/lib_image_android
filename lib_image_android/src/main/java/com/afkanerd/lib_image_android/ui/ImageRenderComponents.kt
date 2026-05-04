@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.telephony.SmsManager
 import android.util.Base64
+import android.widget.ImageView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
@@ -45,6 +46,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -84,12 +86,13 @@ fun ImageRender(
     uri: Uri,
     maxNumberSms: Int = 64,
     smsCountPaddingValue: Int = 0,
+    onApplyCallback: () -> Unit,
     backActionCallback: () -> Unit = { navController.popBackStack() },
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
 
-    var processedImage by remember{ mutableStateOf<ImageViewModel.ProcessedImage?>(null) }
+    val processedImage by imageViewModel.processedImageUiState.collectAsState()
 
     var smsCount by remember{ mutableIntStateOf(0) }
     var size by remember{ mutableIntStateOf(0) }
@@ -113,11 +116,13 @@ fun ImageRender(
 
     LaunchedEffect(qualityRatio, resizeRatio) {
         processing = true
-        processedImage = imageViewModel.compressImage(
-            bitmap,
-            qualityRatio.toInt(),
-            (bitmap.width / resizeRatio).toInt(),
-            (bitmap.height / resizeRatio).toInt(),
+        imageViewModel.setProcessedImage(
+            imageViewModel.compressImage(
+                bitmap,
+                qualityRatio.toInt(),
+                (bitmap.width / resizeRatio).toInt(),
+                (bitmap.height / resizeRatio).toInt(),
+            )
         )
         processing = false
     }
@@ -157,10 +162,7 @@ fun ImageRender(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        imageViewModel.processedImage = processedImage
-                        navController.popBackStack()
-                    } ) {
+                    IconButton(onClick = onApplyCallback ) {
                         Icon(Icons.Default.Check,
                             stringResource(R.string.apply))
                     }
@@ -290,8 +292,9 @@ fun ImageRender(
                     if(showResizeSlider || inPreviewMode) {
                         Spacer(Modifier.padding(8.dp))
 
-                        Card( colors = CardDefaults
-                            .cardColors(MaterialTheme.colorScheme.surfaceContainer),
+                        Card(
+                            colors = CardDefaults
+                                .cardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
                             Column {
                                 SliderImplementation(
@@ -405,4 +408,17 @@ fun SliderImplementation(
             label = { Text(label) },
         )
     }
+}
+
+@Preview
+@Composable
+fun ImageMainView() {
+    val context = LocalContext.current
+    val uri = "android.resource://${context.packageName}/${R.drawable._0241226_124819}".toUri()
+    ImageRender(
+        navController = rememberNavController(),
+        imageViewModel = remember { ImageViewModel() },
+        uri = uri,
+        onApplyCallback = {}
+    )
 }
