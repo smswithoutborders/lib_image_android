@@ -115,7 +115,11 @@ class ImageTransmissionService : Service() {
                         }
                         WorkInfo.State.CANCELLED,
                         WorkInfo.State.SUCCEEDED -> {
+                            if(::messageStateChangedBroadcast.isInitialized) {
+                                unregisterReceiver(messageStateChangedBroadcast)
+                            }
                             stopSelf()
+                            stopForeground(STOP_FOREGROUND_REMOVE)
                         }
                         else -> {}
                     }
@@ -409,12 +413,12 @@ class ImageTransmissionService : Service() {
         )
     }
 
-//    override fun onDestroy() {
-//        if(::messageStateChangedBroadcast.isInitialized) {
-//            unregisterReceiver(messageStateChangedBroadcast)
-//        }
-//        super.onDestroy()
-//    }
+    override fun onDestroy() {
+        if(::messageStateChangedBroadcast.isInitialized) {
+            unregisterReceiver(messageStateChangedBroadcast)
+        }
+        super.onDestroy()
+    }
 
 
 }
