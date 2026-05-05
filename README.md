@@ -26,18 +26,40 @@ dependencies {
 
 ## Usage
 ```kotlin
-val imageViewModel: ImageViewModel by viewModels()
 
-fun ImageRender(
-    navController: NavController,
-    imageViewModel: ImageViewModel,
-    uri: Uri,
-    maxNumberSms: Int = 64,
-    smsCountPaddingValue: Int = 0,
-    backActionCallback: () -> Unit = { navController.popBackStack() },
-) {
-...
-{
+class MainActivity: BindActivity() {
+
+	val imageViewModel: ImageViewModel by viewModels()
+	
+	composable<Screen> {
+		fun ImageRender(
+			    navController: NavController,
+			    imageViewModel: ImageViewModel,
+			    uri: Uri,
+			    maxNumberSms: Int = 64,
+			    smsCountPaddingValue: Int = 0,
+				imageService = imageTransmissionService, // Comes from BindActivity()
+				imageTransmissionCallback = {
+					// ...
+					// Things to be done which would inform of the state
+					val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
+						putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
+					}
+					sendBroadcast(intent)
+				},
+			    backActionCallback: () -> Unit = { navController.popBackStack() },
+			) {
+			...
+			{
+		}
+
+		...
+		imageTransmissionService.setRemoteExecutionCallback(imageViewModel.transmissionCallback!!)
+	}
+
+
+/**
+
 ```
 
 ## How it works
