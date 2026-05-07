@@ -104,7 +104,6 @@ class ImageViewModel: ViewModel() {
     }
 
     fun setUri(context: Context, value: Uri) {
-        reset()
         uri = value
         compressImage(context)
     }
