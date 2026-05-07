@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ImageRenderNav(
-    val uri: String,
+    val uri: String? = null,
     val smsCountPadding: Int = 0,
 )
 

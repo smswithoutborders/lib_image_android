@@ -1,15 +1,24 @@
 package com.afkanerd.lib_image_android.ui.viewModels
 
+import android.R.attr.bitmap
+import android.R.attr.height
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.provider.MediaStore
+import android.telephony.SmsManager
 import android.util.Base64
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import androidx.core.graphics.scale
@@ -25,11 +34,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
+import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.data.ImageTransmissionNotification
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.extensions.toLittleEndianBytes
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -51,46 +62,87 @@ class ImageViewModel: ViewModel() {
         @Transient
         var image: Bitmap? = null,
         var uri: String,
-        var size: Long,
         var format: String = "raw",
         var rawBytes: ByteArray? = null,
     )
 
-    private val _processedImageUiState = MutableStateFlow<ProcessedImage?>(null)
-    val processedImageUiState: StateFlow<ProcessedImage?> = _processedImageUiState
+
+    private val _processingImageUiState = MutableStateFlow(false)
+    val processingImageUiState: StateFlow<Boolean> = _processingImageUiState
+
+    private val _processedImage = MutableStateFlow<ProcessedImage?>(null)
+    val processedImage: StateFlow<ProcessedImage?> = _processedImage
+
+    private val _smsCount = MutableStateFlow(0)
+    val smsCount: StateFlow<Int> = _smsCount
+
+
+    private val _size = MutableStateFlow(0)
+    val size: StateFlow<Int> = _size
 
     private val _operationWorkManagerUiState = MutableStateFlow<Operation?>(null)
     val operationWorkManagerUiState: StateFlow<Operation?> = _operationWorkManagerUiState
 
-    fun setProcessedImage(
-        processedImage: ProcessedImage?,
-    ) {
-        _processedImageUiState.value = processedImage
+    private val _qualityRatio = MutableStateFlow(100f)
+    val qualityRatio: StateFlow<Float> = _qualityRatio
+
+
+    private val _resizeRatio = MutableStateFlow(1f)
+    val resizeRatio: StateFlow<Float> = _resizeRatio
+
+    private var uri: Uri? = null
+
+    fun setUri(context: Context, value: Uri) {
+        uri = value
+        compressImage(context)
     }
 
-    fun compressImage(
-        bitmap: Bitmap,
-        uri: String,
-        qualityRatio: Int,
-        width: Int,
-        height: Int,
-        compressFormat: CompressFormat =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+    fun setQuality(context: Context, value: Float) {
+        _qualityRatio.value = value
+        compressImage(context)
+    }
+
+    fun setResizeRatio(context: Context, value: Float) {
+        _resizeRatio.value = if(value < 1) 1f else value
+        compressImage(context)
+    }
+
+    private fun compressImage(context: Context) {
+        _processingImageUiState.value = true
+        viewModelScope.launch(Dispatchers.Default) {
+            val compressFormat: CompressFormat = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
                 CompressFormat.WEBP_LOSSY else CompressFormat.WEBP
-    ): ProcessedImage? {
-        val bitmap = bitmap.scale( width, height, false )
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        if(bitmap.compress( compressFormat, qualityRatio, byteArrayOutputStream)) {
-            val image =  byteArrayToBitmap( byteArrayOutputStream.toByteArray())
-            return ProcessedImage(
-                image,
-                uri = uri,
-                byteArrayOutputStream.size().toLong(),
-                compressFormat.name,
-                rawBytes = byteArrayOutputStream.toByteArray()
-            )
+
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ImageDecoder.decodeBitmap(ImageDecoder
+                    .createSource(context.contentResolver, uri!!))
+            } else {
+                MediaStore.Images.Media.getBitmap(context.contentResolver,
+                    uri!!)
+            }
+
+            val width = (bitmap.width / _resizeRatio.value).toInt()
+            val height = (bitmap.height / _resizeRatio.value).toInt()
+
+            val scaledBitmap = bitmap.scale(width, height, false )
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            if(scaledBitmap.compress(
+                    compressFormat,
+                    _qualityRatio.value.toInt(),
+                    byteArrayOutputStream)
+            ) {
+                val image =  byteArrayToBitmap(byteArrayOutputStream.toByteArray())
+                _processedImage.value = ProcessedImage(
+                    image = image,
+                    uri = uri.toString(),
+                    rawBytes = byteArrayOutputStream.toByteArray(),
+                    format = compressFormat.name
+                )
+            }
+            _smsCount.value = getSmsCount(context)
+            _size.value = byteArrayOutputStream.size()
+            _processingImageUiState.value = false
         }
-        return null
     }
 
     fun byteArrayToBitmap(
@@ -136,8 +188,7 @@ class ImageViewModel: ViewModel() {
             }
 
             val sessionId = getItpSession(context = context).toByte()
-            val imageLength = _processedImageUiState.value?.size?.toShort()
-                ?: throw Exception("Processed Image does not have size")
+            val imageLength = _size.value.toShort()
 
             val remoteListenersListenerWorker = OneTimeWorkRequestBuilder<SmsWorkManager>()
                 .setConstraints(constraints)
@@ -284,5 +335,19 @@ class ImageViewModel: ViewModel() {
 
         return dividedImage
     }
+
+    private fun getSmsCount(
+        context: Context,
+        smsCountPaddingValue: Int = 0
+    ): Int {
+        val subId = SmsManager.getDefaultSmsSubscriptionId()
+        return (if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context
+            .getSystemService(SmsManager::class.java)
+            .createForSubscriptionId(subId) else
+            SmsManager.getSmsManagerForSubscriptionId(subId))
+            .divideMessage(Base64.encodeToString(_processedImage.value?.rawBytes,
+                Base64.DEFAULT)).size + smsCountPaddingValue
+    }
+
 
 }

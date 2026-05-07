@@ -1,5 +1,7 @@
 package com.afkanerd.lib_image_android.ui
 
+import android.R.attr.bitmap
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -84,7 +86,7 @@ import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 fun ImageRender(
     navController: NavController,
     imageViewModel: ImageViewModel,
-    uri: Uri,
+    uri: Uri? = null,
     maxNumberSms: Int = 64,
     smsCountPaddingValue: Int = 0,
     imageService: ImageTransmissionService,
@@ -94,60 +96,21 @@ fun ImageRender(
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
+    if(uri != null) {
+        imageViewModel.setUri(context, uri)
+    }
 
-    val processedImage by imageViewModel.processedImageUiState.collectAsState()
+    val processing by imageViewModel.processingImageUiState.collectAsState()
+    val processedImage by imageViewModel.processedImage.collectAsState()
 
-    var smsCount by remember{ mutableIntStateOf(0) }
-    var size by remember{ mutableIntStateOf(0) }
+    val smsCount by imageViewModel.smsCount.collectAsState()
+    val size by imageViewModel.size.collectAsState()
 
     var showQualitySlider by remember{ mutableStateOf(false ) }
     var showResizeSlider by remember{ mutableStateOf(false ) }
 
-    var qualityRatio by remember{ mutableFloatStateOf(100f ) }
-    var resizeRatio by remember{ mutableFloatStateOf(1f ) }
-
-    val bitmap = if(inPreviewMode) BitmapFactory
-        .decodeResource(context.resources, R.drawable._0241226_124819)
-    else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        ImageDecoder.decodeBitmap(ImageDecoder
-            .createSource(context.contentResolver, uri))
-    } else {
-        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-    }
-
-    var processing by remember{ mutableStateOf(false ) }
-
-    LaunchedEffect(qualityRatio, resizeRatio) {
-        processing = true
-        imageViewModel.setProcessedImage(
-            imageViewModel.compressImage(
-                bitmap,
-                uri = uri.toString(),
-                qualityRatio.toInt(),
-                (bitmap.width / resizeRatio).toInt(),
-                (bitmap.height / resizeRatio).toInt(),
-            )
-        )
-        processing = false
-    }
-
-    fun getSmsCount(): Int {
-        if(processedImage == null)
-            return 0
-
-        val subId = SmsManager.getDefaultSmsSubscriptionId()
-        return (if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context
-            .getSystemService(SmsManager::class.java)
-            .createForSubscriptionId(subId) else
-            SmsManager.getSmsManagerForSubscriptionId(subId))
-            .divideMessage(Base64.encodeToString(processedImage!!.rawBytes,
-                Base64.DEFAULT)).size + smsCountPaddingValue
-    }
-
-    LaunchedEffect(processedImage) {
-        smsCount = getSmsCount()
-        size = processedImage?.rawBytes?.size ?: 0
-    }
+    val qualityRatio by imageViewModel.qualityRatio.collectAsState()
+    val resizeRatio by imageViewModel.resizeRatio.collectAsState()
 
     BackHandler {
         navController.popBackStack()
@@ -182,7 +145,6 @@ fun ImageRender(
             .padding(innerPadding)) {
             if(processing || inPreviewMode) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
-
             }
             Column(
                 Modifier
@@ -195,10 +157,9 @@ fun ImageRender(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if(inPreviewMode || processedImage?.image?.asImageBitmap() != null){
+                    processedImage?.let {
                         Image(
-                            bitmap = if(inPreviewMode) bitmap.asImageBitmap() else
-                                processedImage!!.image!!.asImageBitmap(),
+                            bitmap = processedImage!!.image!!.asImageBitmap(),
                             contentDescription = "Bitmap image",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.size(250.dp),
@@ -223,17 +184,20 @@ fun ImageRender(
 
                         ImageInfo(
                             stringResource(R.string.width),
-                            (processedImage?.image?.width ?: bitmap.width).toString(),
+                            (processedImage?.image?.width).toString(),
                         )
 
                         ImageInfo(
                             stringResource(R.string.height),
-                            (processedImage?.image?.height ?: bitmap.height).toString(),
+                            (processedImage?.image?.height).toString(),
                         )
 
                         ImageInfo(
                             stringResource(R.string.size),
-                            stringResource(R.string.kb, size / 1000)
+                            stringResource(
+                                if(size < 1000) R.string.bytes else R.string.kb,
+                                if(size < 1000) size else size / 1000
+                            )
                         )
                     }
                 }
@@ -267,8 +231,11 @@ fun ImageRender(
                             colors = CardDefaults
                                 .cardColors(MaterialTheme.colorScheme.surfaceContainer),
                         ) {
-                            SliderImplementation(stringResource(R.string.quality)) {
-                                qualityRatio = it
+                            SliderImplementation(
+                                stringResource(R.string.quality),
+                                qualityRatio,
+                            ) {
+                                imageViewModel.setQuality(context, it)
                             }
                         }
                     }
@@ -308,7 +275,7 @@ fun ImageRender(
                                     stringResource(R.string.size),
                                     resizeRatio
                                 ) {
-                                    resizeRatio = if(it < 1) 1f else it
+                                    imageViewModel.setResizeRatio(context,it)
                                 }
                                 Spacer(Modifier.padding(4.dp))
                                 Text(

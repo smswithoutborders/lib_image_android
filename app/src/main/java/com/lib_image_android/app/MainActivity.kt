@@ -51,7 +51,7 @@ class MainActivity : BindActivity() {
                         ImageRender(
                             navController = navController,
                             imageViewModel = imageViewModel,
-                            uri = imageRenderNav.uri.toUri(),
+                            uri = imageRenderNav.uri?.toUri(),
                             imageService = imageTransmissionService,
                             imageTransmissionCallback = {
                                 Thread.sleep(5000)

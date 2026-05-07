@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
+import com.afkanerd.lib_image_android.ui.navigation.ImageRenderNav
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -56,7 +58,7 @@ fun ImagePreview(
     imageViewModel: ImageViewModel,
 ) {
     val inPreviewMode = LocalInspectionMode.current
-    val processedImage by imageViewModel.processedImageUiState.collectAsState()
+    val processedImage by imageViewModel.processedImage.collectAsState()
     val context = LocalContext.current
 
     val bitmap = BitmapFactory
@@ -135,13 +137,17 @@ fun ImagePreview(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                bitmap = if(inPreviewMode) bitmap.asImageBitmap() else
-                    processedImage!!.image!!.asImageBitmap(),
-                contentDescription = "Bitmap image",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(250.dp),
-            )
+            Card(onClick = {
+                navController.navigate(ImageRenderNav())
+            }) {
+                Image(
+                    bitmap = if(inPreviewMode) bitmap.asImageBitmap() else
+                        processedImage!!.image!!.asImageBitmap(),
+                    contentDescription = "Bitmap image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(250.dp),
+                )
+            }
         }
     }
 }
