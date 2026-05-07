@@ -122,6 +122,7 @@ fun ImageRender(
         imageViewModel.setProcessedImage(
             imageViewModel.compressImage(
                 bitmap,
+                uri = uri.toString(),
                 qualityRatio.toInt(),
                 (bitmap.width / resizeRatio).toInt(),
                 (bitmap.height / resizeRatio).toInt(),

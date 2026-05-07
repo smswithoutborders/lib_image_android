@@ -6,6 +6,7 @@ import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.util.Base64
@@ -49,6 +50,7 @@ class ImageViewModel: ViewModel() {
     data class ProcessedImage(
         @Transient
         var image: Bitmap? = null,
+        var uri: String,
         var size: Long,
         var format: String = "raw",
         var rawBytes: ByteArray? = null,
@@ -68,6 +70,7 @@ class ImageViewModel: ViewModel() {
 
     fun compressImage(
         bitmap: Bitmap,
+        uri: String,
         qualityRatio: Int,
         width: Int,
         height: Int,
@@ -81,6 +84,7 @@ class ImageViewModel: ViewModel() {
             val image =  byteArrayToBitmap( byteArrayOutputStream.toByteArray())
             return ProcessedImage(
                 image,
+                uri = uri,
                 byteArrayOutputStream.size().toLong(),
                 compressFormat.name,
                 rawBytes = byteArrayOutputStream.toByteArray()
