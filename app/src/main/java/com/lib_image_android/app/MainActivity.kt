@@ -14,10 +14,10 @@ import androidx.navigation.toRoute
 import com.afkanerd.lib_image_android.ui.BindActivity
 import com.afkanerd.lib_image_android.ui.ImageRender
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
+import com.afkanerd.lib_image_android.ui.navigation.ImageRenderNav
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.lib_image_android.app.navigation.ImagePreviewNav
 import com.lib_image_android.app.navigation.ImageRenderHomeNav
-import com.lib_image_android.app.navigation.ImageRenderNav
 import com.lib_image_android.app.theme.Lib_image_androidTheme
 import com.lib_image_android.app.views.ImageMainView
 import com.lib_image_android.app.views.ImagePreview

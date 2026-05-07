@@ -24,8 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.afkanerd.lib_image_android.ui.navigation.ImageRenderNav
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import com.lib_image_android.app.navigation.ImageRenderNav
 
 
 @Composable
@@ -59,9 +59,11 @@ fun ImageCompressionCompareRender(
         } else {
             MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
         }
-        navController.navigate(ImageRenderNav(
-            uri = uri.toString(),
-        ))
+        navController.navigate(
+            ImageRenderNav(
+                uri = uri.toString(),
+            )
+        )
     }
 
     Column(

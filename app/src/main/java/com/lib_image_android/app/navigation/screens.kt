@@ -7,10 +7,4 @@ import kotlinx.serialization.Serializable
 object ImageRenderHomeNav
 
 @Serializable
-data class ImageRenderNav(
-    val uri: String,
-    val smsCountPadding: Int = 0,
-)
-
-@Serializable
 object ImagePreviewNav
