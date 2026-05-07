@@ -92,6 +92,17 @@ class ImageViewModel: ViewModel() {
 
     private var uri: Uri? = null
 
+    fun reset() {
+        uri = null
+        _resizeRatio.value = 1f
+        _qualityRatio.value = 100f
+        _size.value = 0
+        _smsCount.value = 0
+        _processedImage.value = null
+        _operationWorkManagerUiState.value = null
+        _processingImageUiState.value = false
+    }
+
     fun setUri(context: Context, value: Uri) {
         uri = value
         compressImage(context)
