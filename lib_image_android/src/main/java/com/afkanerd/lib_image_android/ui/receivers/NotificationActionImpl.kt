@@ -20,7 +20,6 @@ class NotificationActionImpl: BroadcastReceiver() {
                 context?.sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
             }
             NOTIFICATION_PAUSE_ACTION_INTENT_ACTION -> {
-                TODO()
             }
             NOTIFICATION_RETRY_ACTION_INTENT_ACTION -> {
                 context?.sendBroadcast(Intent(SmsWorkManager.ITP_RETRY_SERVICE))
