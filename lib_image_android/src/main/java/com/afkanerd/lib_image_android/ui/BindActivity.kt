@@ -9,7 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 
-open class BindActivity : ComponentActivity() {
+open class BindActivity : AppCompatActivity() {
     lateinit var imageTransmissionService: ImageTransmissionService
     private var imageServiceBound: Boolean = false
 
