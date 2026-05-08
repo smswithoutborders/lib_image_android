@@ -37,6 +37,7 @@ import androidx.work.WorkRequest
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.data.ImageTransmissionNotification
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
+import com.afkanerd.lib_image_android.ui.extensions.toBitmap
 import com.afkanerd.lib_image_android.ui.extensions.toLittleEndianBytes
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
@@ -142,7 +143,7 @@ class ImageViewModel: ViewModel() {
                     _qualityRatio.value.toInt(),
                     byteArrayOutputStream)
             ) {
-                val image =  byteArrayToBitmap(byteArrayOutputStream.toByteArray())
+                val image = byteArrayOutputStream.toByteArray().toBitmap()
                 _processedImage.value = ProcessedImage(
                     image = image,
                     uri = uri.toString(),
@@ -154,19 +155,6 @@ class ImageViewModel: ViewModel() {
             _size.value = byteArrayOutputStream.size()
             _processingImageUiState.value = false
         }
-    }
-
-    fun byteArrayToBitmap(
-        byteArray: ByteArray,
-    ): Bitmap {
-        val options = BitmapFactory.Options()
-        return BitmapFactory
-            .decodeByteArray(
-                byteArray,
-                0,
-                byteArray.size,
-                options
-            )
     }
 
     fun startWorkManager(

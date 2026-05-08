@@ -1,5 +1,8 @@
 package com.afkanerd.lib_image_android.ui.extensions
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+
 fun ByteArray.toIntLittleEndian(): Int {
     var result = 0
     for (i in this.indices) {
@@ -28,3 +31,15 @@ fun ByteArray.isHexBytes(): Boolean {
     if (text.isEmpty()) return false
     return text.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
 }
+
+fun ByteArray.toBitmap(): Bitmap {
+    val options = BitmapFactory.Options()
+    return BitmapFactory
+        .decodeByteArray(
+            this,
+            0,
+            this.size,
+            options
+        )
+}
+
