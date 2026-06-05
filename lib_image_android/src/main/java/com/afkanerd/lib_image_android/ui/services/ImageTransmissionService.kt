@@ -42,14 +42,14 @@ class ImageTransmissionService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var workState: WorkInfo.State
 
-    private var runtimeExecution: (() -> Unit)? = null
+    private var runtimeExecution: ((String) -> Unit)? = null
 
     // Binder given to clients.
     private val binder = LocalBinder()
 
    var payloadSize: Int = 0
 
-    fun setRemoteExecutionCallback(callback: () -> Unit) {
+    fun setRemoteExecutionCallback(callback: (String) -> Unit) {
         runtimeExecution = callback
     }
 
@@ -148,8 +148,10 @@ class ImageTransmissionService : Service() {
                 return@launch
             }
             payloadSize = info
-            imageViewModel.incrementIndex(applicationContext, sessionId)
-            runtimeExecution?.invoke()
+
+            val payload = imageViewModel
+                .getPayloadCache(applicationContext, sessionId)
+            runtimeExecution?.invoke(payload!!)
 
             val notification = createForegroundNotification(
                 intent,
@@ -341,7 +343,7 @@ class ImageTransmissionService : Service() {
                                 when (workState) {
                                     WorkInfo.State.ENQUEUED,
                                     WorkInfo.State.RUNNING -> {
-                                        runtimeExecution?.invoke()
+                                        runtimeExecution?.invoke(payload)
                                     }
                                     else -> {}
                                 }
