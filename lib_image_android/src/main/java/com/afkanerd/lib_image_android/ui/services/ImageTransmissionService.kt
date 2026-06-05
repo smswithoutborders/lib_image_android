@@ -50,7 +50,7 @@ import kotlin.uuid.Uuid
 class ImageTransmissionService : Service() {
     lateinit var workManager: WorkManager
     val imageViewModel = ImageViewModel()
-    private lateinit var dividedMessages: MutableList<String>
+    private lateinit var dividedMessages: List<String>
     private lateinit var messageStateChangedBroadcast: BroadcastReceiver
     private var notificationId: Int = -1
 
@@ -62,7 +62,11 @@ class ImageTransmissionService : Service() {
     // Binder given to clients.
     private val binder = LocalBinder()
 
-    fun setRemoteExecutionCallback(callback: () -> Unit) {
+    fun setRemoteExecutionCallback(
+        payload: List<String>,
+        callback: () -> Unit
+    ) {
+        dividedMessages = payload
         runtimeExecution = callback
     }
 

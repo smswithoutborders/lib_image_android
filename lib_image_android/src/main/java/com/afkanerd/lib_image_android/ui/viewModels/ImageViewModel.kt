@@ -126,11 +126,10 @@ class ImageViewModel: ViewModel() {
                 CompressFormat.WEBP_LOSSY else CompressFormat.WEBP
 
             val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ImageDecoder.decodeBitmap(ImageDecoder
-                    .createSource(context.contentResolver, uri!!))
+                ImageDecoder.decodeBitmap(
+                    ImageDecoder.createSource(context.contentResolver, uri!!))
             } else {
-                MediaStore.Images.Media.getBitmap(context.contentResolver,
-                    uri!!)
+                MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
             }
 
             val width = (bitmap.width / _resizeRatio.value).toInt()

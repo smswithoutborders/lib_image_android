@@ -183,7 +183,6 @@ class SmsWorkManager(
     }
 
     companion object {
-        const val ITP_PAYLOAD = "ITP_PAYLOAD"
         const val ITP_VERSION = "ITP_VERSION"
         const val ITP_SESSION_ID = "ITP_SESSION_ID"
         const val ITP_TRANSMISSION_ADDRESS = "ITP_TRANSMISSION_ADDRESS"
@@ -193,7 +192,6 @@ class SmsWorkManager(
         const val ITP_TEXT_LENGTH = "ITP_TEXT_LENGTH"
         const val ITP_SERVICE_ICON = "ITP_SERVICE_ICON"
         const val ITP_NOTIFICATION_FILTER = "ITP_NOTIFICATION_FILTER"
-        const val ITP_STOP_SERVICE = "ITP_STOP_SERVICE"
         const val IMAGE_TRANSMISSION_WORK_MANAGER_TAG = "IMAGE_TRANSMISSION_WORK_MANAGER_TAG"
         const val ITP_SERVICE_COMPLETION = "ITP_IS_SUCCESS"
         const val ITP_RETRY_SERVICE = "ITP_RETRY_SERVICE"

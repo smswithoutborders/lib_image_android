@@ -75,6 +75,17 @@ import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 
+fun ByteArray.chunked(size: Int): List<String> {
+    require(size > 0) { "Size must be greater than 0." }
+    return (0 until this.size step size).map { startIndex ->
+        val endIndex = minOf(startIndex + size, this.size)
+        Base64.encodeToString(
+            this.copyOfRange(startIndex, endIndex),
+            Base64.DEFAULT
+        )
+    }
+}
+
 /**
  * imageViewModel: Used to manage the image states.
  * uri: The Uri for the image to be edited.
@@ -123,14 +134,16 @@ fun ImageRender(
                 title = { Text(stringResource(R.string.edit_image)) },
                 navigationIcon = {
                     IconButton(onClick = backActionCallback ) {
-                        Icon(
-                            Icons.AutoMirrored.Default.ArrowBack,
+                        Icon(Icons.AutoMirrored.Default.ArrowBack,
                             "")
                     }
                 },
                 actions = {
                     IconButton(onClick = {
-                        imageService.setRemoteExecutionCallback(imageTransmissionCallback)
+                        imageService.setRemoteExecutionCallback(
+                            processedImage?.rawBytes!!.chunked(140),
+                            imageTransmissionCallback
+                        )
                         onApplyCallback()
                     } ) {
                         Icon(Icons.Default.Check,
