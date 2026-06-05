@@ -31,6 +31,13 @@ class MainActivity : BindActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        setRemoteExecutionCallback {
+            val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
+                putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
+            }
+            sendBroadcast(intent)
+        }
+
         setContent {
             navController = rememberNavController()
 
@@ -53,13 +60,6 @@ class MainActivity : BindActivity() {
                             imageViewModel = imageViewModel,
                             uri = imageRenderNav.uri?.toUri(),
                             imageService = imageTransmissionService,
-                            imageTransmissionCallback = {
-                                Thread.sleep(5000)
-                                val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
-                                    putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
-                                }
-                                sendBroadcast(intent)
-                            },
                             onApplyCallback = {
                                 navController.navigate(ImagePreviewNav) {
                                     popUpTo(navController.graph.startDestinationId) {
@@ -73,6 +73,7 @@ class MainActivity : BindActivity() {
                     composable<ImagePreviewNav>{
                         ImagePreview(
                             navController = navController,
+                            imageService = imageTransmissionService,
                             imageViewModel = imageViewModel
                         )
                     }

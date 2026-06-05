@@ -44,7 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
+import com.afkanerd.lib_image_android.ui.chunked
 import com.afkanerd.lib_image_android.ui.navigation.ImageRenderNav
+import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -55,6 +57,7 @@ import com.lib_image_android.app.theme.Lib_image_androidTheme
 @Composable
 fun ImagePreview(
     navController: NavController,
+    imageService: ImageTransmissionService?,
     imageViewModel: ImageViewModel,
 ) {
     val inPreviewMode = LocalInspectionMode.current
@@ -78,11 +81,7 @@ fun ImagePreview(
         if (isGranted) {
             imageViewModel.startWorkManager(
                 context = context,
-                version = 0x4,
-                address = "",
-                subscriptionId = -1,
-                textLength = 10,
-                formattedPayload = ByteArray(140*60),
+                payload = processedImage?.rawBytes!!.chunked(140),
                 notificationFilter = notificationFilter
             )
         } else {
@@ -113,11 +112,7 @@ fun ImagePreview(
                         } else {
                             imageViewModel.startWorkManager(
                                 context = context,
-                                version = 0x4,
-                                address = "",
-                                subscriptionId = -1,
-                                textLength = 10,
-                                formattedPayload = ByteArray(140*60),
+                                payload = processedImage?.rawBytes!!.chunked(140),
                                 notificationFilter = notificationFilter
                             )
                         }
@@ -158,6 +153,7 @@ fun ImagePreview_Preview() {
     Lib_image_androidTheme {
         ImagePreview(
             rememberNavController(),
+            null,
             remember{ ImageViewModel() }
         )
     }

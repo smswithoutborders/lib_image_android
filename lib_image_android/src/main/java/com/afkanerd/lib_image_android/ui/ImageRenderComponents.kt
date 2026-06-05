@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +75,8 @@ import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 fun ByteArray.chunked(size: Int): List<String> {
     require(size > 0) { "Size must be greater than 0." }
@@ -101,7 +104,6 @@ fun ImageRender(
     maxNumberSms: Int = 64,
     smsCountPaddingValue: Int = 0,
     imageService: ImageTransmissionService,
-    imageTransmissionCallback: () -> Unit,
     onApplyCallback: () -> Unit,
     backActionCallback: () -> Unit = { navController.popBackStack() },
 ) {
@@ -122,6 +124,7 @@ fun ImageRender(
 
     val qualityRatio by imageViewModel.qualityRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
+    val scope = rememberCoroutineScope()
 
     BackHandler {
         navController.popBackStack()
@@ -140,10 +143,6 @@ fun ImageRender(
                 },
                 actions = {
                     IconButton(onClick = {
-                        imageService.setRemoteExecutionCallback(
-                            processedImage?.rawBytes!!.chunked(140),
-                            imageTransmissionCallback
-                        )
                         onApplyCallback()
                     } ) {
                         Icon(Icons.Default.Check,
@@ -406,7 +405,6 @@ fun ImageMainView() {
         navController = rememberNavController(),
         imageViewModel = remember { ImageViewModel() },
         uri = uri,
-        imageTransmissionCallback = {},
         onApplyCallback = {},
         imageService = ImageTransmissionService()
     )

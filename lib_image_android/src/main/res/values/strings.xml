@@ -36,4 +36,5 @@
     <string name="will_resume_sending_shortly">Will resume sending shortly…</string>
     <string name="message_failed_notifications_descriptions">Get notifications when messages fail</string>
     <string name="bytes">%1$d B</string>
+    <string name="sending_content">[%1$d] Sending content...</string>
 </resources>

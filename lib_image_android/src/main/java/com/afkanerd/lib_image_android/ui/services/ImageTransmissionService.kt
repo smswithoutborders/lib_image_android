@@ -1,7 +1,5 @@
 package com.afkanerd.lib_image_android.ui.services
 
-import android.Manifest
-import android.R.attr.version
 import android.app.Activity
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,22 +8,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
-import android.util.Base64
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.datastore.preferences.core.byteArrayPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.work.ForegroundInfo
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -33,24 +25,17 @@ import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.receivers.NotificationActionImpl
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import com.afkanerd.smswithoutborders_libsmsmms.data.ImageTransmissionProtocol
-import com.google.common.util.concurrent.ListenableFuture
+import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import java.nio.charset.StandardCharsets
 import java.util.UUID
-import kotlin.collections.get
 import kotlin.jvm.java
-import kotlin.uuid.Uuid
 
 class ImageTransmissionService : Service() {
     lateinit var workManager: WorkManager
     val imageViewModel = ImageViewModel()
-    private lateinit var dividedMessages: List<String>
     private lateinit var messageStateChangedBroadcast: BroadcastReceiver
     private var notificationId: Int = -1
 
@@ -62,11 +47,9 @@ class ImageTransmissionService : Service() {
     // Binder given to clients.
     private val binder = LocalBinder()
 
-    fun setRemoteExecutionCallback(
-        payload: List<String>,
-        callback: () -> Unit
-    ) {
-        dividedMessages = payload
+   var payloadSize: Int = 0
+
+    fun setRemoteExecutionCallback(callback: () -> Unit) {
         runtimeExecution = callback
     }
 
@@ -83,6 +66,7 @@ class ImageTransmissionService : Service() {
         return binder
     }
 
+
     override fun onCreate() {
         super.onCreate()
         workManager  = WorkManager.getInstance(applicationContext)
@@ -95,33 +79,32 @@ class ImageTransmissionService : Service() {
     private fun workflowWatch(
         intent: Intent,
         workId: String?,
-        sessionId: Byte,
         icon: Int,
     ) {
         CoroutineScope(Dispatchers.Default).launch {
             workManager.getWorkInfoByIdFlow(UUID.fromString(workId))
                 .collect { workInfo ->
                     workState = workInfo!!.state
+                    val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
 
                     when(workInfo.state) {
                         WorkInfo.State.ENQUEUED -> {
-                            val transmissionIndex = imageViewModel
-                                .getTransmissionIndex(applicationContext, sessionId) ?: 0
                             val notification = createForegroundNotification(
                                 intent,
                                 icon = icon,
-                                progress = transmissionIndex,
-                                maxProgress = dividedMessages.size,
-                                isQueue = true
+                                progress = imageViewModel.getIndex(applicationContext, sessionId),
+                                maxProgress = payloadSize,
+                                isQueue = true,
+                                sessionId = sessionId
                             ).notification
 
                             notificationManager.notify(notificationId, notification)
                         }
                         WorkInfo.State.CANCELLED,
                         WorkInfo.State.SUCCEEDED -> {
-                            if(::messageStateChangedBroadcast.isInitialized) {
-                                unregisterReceiver(messageStateChangedBroadcast)
-                            }
+//                            if(::messageStateChangedBroadcast.isInitialized) {
+//                                unregisterReceiver(messageStateChangedBroadcast)
+//                            }
                             stopSelf()
                             stopForeground(STOP_FOREGROUND_REMOVE)
                         }
@@ -129,82 +112,54 @@ class ImageTransmissionService : Service() {
                     }
                 }
         }
-
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val address  = intent?.getStringExtra(SmsWorkManager.ITP_TRANSMISSION_ADDRESS)
-            ?: return START_NOT_STICKY
-
-        val version  = intent.getByteExtra(SmsWorkManager.ITP_VERSION, -1)
-        if(version.toInt() == -1) return START_NOT_STICKY
-
-        val imageLength =
-            intent.getByteArrayExtra(SmsWorkManager.ITP_IMAGE_LENGTH) ?:
-            throw Exception("Failed to find ${SmsWorkManager.ITP_IMAGE_LENGTH}")
-
-        val textLength =
-            intent.getByteArrayExtra(SmsWorkManager.ITP_TEXT_LENGTH) ?:
-            throw Exception("Failed to find ${SmsWorkManager.ITP_TEXT_LENGTH}")
-
-        val sessionId  = intent.getByteExtra(SmsWorkManager.ITP_SESSION_ID, -1)
+        if(intent == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         val icon = intent.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
         val notificationFilters = intent
             .getStringExtra(SmsWorkManager.ITP_NOTIFICATION_FILTER) ?:
             throw Exception("Failed to find ${SmsWorkManager.ITP_NOTIFICATION_FILTER}")
 
-        val subscriptionId = intent.getLongExtra(
-            SmsWorkManager
-            .ITP_TRANSMISSION_SUBSCRIPTION_ID, -1)
-
         val workId = intent.getStringExtra(SmsWorkManager.ITP_WORK_MANAGER_UUID)
-        workflowWatch(
-            intent = intent,
-            workId = workId,
-            sessionId = sessionId,
-            icon = icon
-        )
 
         // This is the continuation
         if(!::messageStateChangedBroadcast.isInitialized) {
             handleBroadcast(
-                sessionId = sessionId,
                 icon = icon,
                 notificationFilters = notificationFilters
             )
         }
+        workflowWatch(
+            intent = intent,
+            workId = workId,
+            icon = icon
+        )
 
         CoroutineScope(Dispatchers.Default).launch {
-            val payload = imageViewModel.getCacheImage(applicationContext, sessionId)
-                ?: return@launch
-
-            dividedMessages = imageViewModel.divideImagePayload(
-                payload,
-                version,
-                sessionId,
-                imageLength,
-                textLength
-            ).apply {
-                val header = Base64.decode(this[0].take(12), Base64.DEFAULT)
-                header[3] = this.size.toByte()
-                this[0] = this[0].replaceRange(0, 12,
-                    Base64.encodeToString(header, Base64.DEFAULT))
+            val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
+            val info = imageViewModel.getPayloadCacheInfo(applicationContext, sessionId)
+            if(info == null) {
+                stopSelf()
+                return@launch
             }
-            val transmissionIndex = imageViewModel
-                .getTransmissionIndex(applicationContext, sessionId) ?: 0
+            payloadSize = info
+            imageViewModel.incrementIndex(applicationContext, sessionId)
+            runtimeExecution?.invoke()
 
             val notification = createForegroundNotification(
                 intent,
                 icon = icon,
-                progress = transmissionIndex,
-                maxProgress = dividedMessages.size,
+                progress = imageViewModel.getIndex(applicationContext, sessionId),
+                maxProgress = payloadSize,
+                sessionId = sessionId
             ).notification
 
             startForeground(notificationId, notification)
-
-            // This is the beginning
-            runtimeExecution?.invoke()
         }
         return START_STICKY
     }
@@ -213,9 +168,10 @@ class ImageTransmissionService : Service() {
         intent: Intent,
         icon: Int,
         maxProgress: Int,
+        sessionId: UByte,
         progress: Int = 0,
         isRetry: Boolean = false,
-        isQueue: Boolean = false
+        isQueue: Boolean = false,
     ) : ForegroundInfo {
         val icon = if(icon == -1) R.drawable.ic_launcher_foreground else icon
         val progress = progress + 1
@@ -229,7 +185,7 @@ class ImageTransmissionService : Service() {
         val title = when {
             isRetry -> getString(R.string.sending_stop)
             isQueue -> getString(R.string.queued_for_sending)
-            else -> getString(R.string.sending_images)
+            else -> getString(R.string.sending_content, sessionId.toInt())
         }
 
         val description = when {
@@ -351,7 +307,6 @@ class ImageTransmissionService : Service() {
      * This is an indicator for iterating through the transmissions
      */
     private fun handleBroadcast(
-        sessionId: Byte,
         icon: Int,
         notificationFilters: String,
     ) {
@@ -364,26 +319,24 @@ class ImageTransmissionService : Service() {
                     intent.hasExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST)
                 ) {
                     CoroutineScope(Dispatchers.Default).launch {
-                        var transmissionIndex = imageViewModel
-                            .getTransmissionIndex(applicationContext, sessionId) ?: 0
+                        val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
 
                         var isRetry = false
 
                         when(resultCode) {
                             Activity.RESULT_OK -> {
-                                transmissionIndex += 1
-                                if (transmissionIndex >= dividedMessages.size) {
+                                imageViewModel.popPayloadCache(applicationContext, sessionId)
+
+                                imageViewModel.incrementIndex(applicationContext, sessionId)
+
+                                val payload = imageViewModel
+                                    .getPayloadCache(applicationContext, sessionId)
+                                if (payload.isNullOrEmpty()) {
                                     sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
                                     return@launch
                                 }
 
-                                imageViewModel.storeTransmissionSessionIndex(
-                                    context = applicationContext,
-                                    sessionId = sessionId,
-                                    index = transmissionIndex
-                                )
-
-                                Thread.sleep(5000)
+                                Thread.sleep((5..10).random() * 1000L)
 
                                 when (workState) {
                                     WorkInfo.State.ENQUEUED,
@@ -398,9 +351,10 @@ class ImageTransmissionService : Service() {
                         val notification = createForegroundNotification(
                             intent,
                             icon = icon,
-                            progress = transmissionIndex,
-                            maxProgress = dividedMessages.size,
+                            progress = imageViewModel.getIndex(applicationContext, sessionId),
+                            maxProgress = payloadSize,
                             isRetry = isRetry,
+                            sessionId = sessionId
                         ).notification
 
                         notificationManager.notify(notificationId, notification)
@@ -419,10 +373,12 @@ class ImageTransmissionService : Service() {
 
     override fun onDestroy() {
         if(::messageStateChangedBroadcast.isInitialized) {
-            unregisterReceiver(messageStateChangedBroadcast)
+            try {
+                unregisterReceiver(messageStateChangedBroadcast)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         super.onDestroy()
     }
-
-
 }

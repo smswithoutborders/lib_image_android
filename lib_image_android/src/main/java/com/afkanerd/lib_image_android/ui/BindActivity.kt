@@ -12,6 +12,7 @@ import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 open class BindActivity : AppCompatActivity() {
     lateinit var imageTransmissionService: ImageTransmissionService
     private var imageServiceBound: Boolean = false
+    private var remoteExecutor: (() -> Unit)? = null
 
     /** Defines callbacks for service binding, passed to bindService().  */
     private val imageTransmissionServiceConnection = object : ServiceConnection {
@@ -19,12 +20,17 @@ open class BindActivity : AppCompatActivity() {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             val binder = service as ImageTransmissionService.LocalBinder
             imageTransmissionService = binder.getService()
+            imageTransmissionService.setRemoteExecutionCallback(remoteExecutor!!)
             imageServiceBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             imageServiceBound = false
         }
+    }
+
+    fun setRemoteExecutionCallback(callback: () -> Unit) {
+        remoteExecutor = callback
     }
 
     override fun onStart() {
