@@ -12,7 +12,7 @@ import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 open class BindActivity : AppCompatActivity() {
     lateinit var imageTransmissionService: ImageTransmissionService
     private var imageServiceBound: Boolean = false
-    private var remoteExecutor: (() -> Unit)? = null
+    private var remoteExecutor: ((String) -> Unit)? = null
 
     /** Defines callbacks for service binding, passed to bindService().  */
     private val imageTransmissionServiceConnection = object : ServiceConnection {
@@ -29,7 +29,7 @@ open class BindActivity : AppCompatActivity() {
         }
     }
 
-    fun setRemoteExecutionCallback(callback: () -> Unit) {
+    fun setRemoteExecutionCallback(callback: (String) -> Unit) {
         remoteExecutor = callback
     }
 

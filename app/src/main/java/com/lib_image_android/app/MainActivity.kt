@@ -31,7 +31,7 @@ class MainActivity : BindActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        setRemoteExecutionCallback {
+        setRemoteExecutionCallback { payload ->
             val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
                 putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
             }
