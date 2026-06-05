@@ -30,6 +30,17 @@ dependencies {
 class MainActivity: BindActivity() {
 
 	val imageViewModel: ImageViewModel by viewModels()
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+		enableEdgeToEdge()
+	
+		setRemoteExecutionCallback {
+			val intent = Intent("com.afkanerd.message_sent_broadcast").apply {
+				putExtra(SmsWorkManager.ITP_TRANSMISSION_REQUEST, true)
+			}
+			sendBroadcast(intent)
+		}
+	...
 	
 	composable<Screen> {
 		fun ImageRender(
