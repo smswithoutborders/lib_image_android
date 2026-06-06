@@ -273,7 +273,7 @@ class ImageViewModel: ViewModel() {
         context.dataStore.edit { session ->
             val currentSession = session[key]
             if(currentSession == null) {
-                session[key] = 0
+                session[key] = 1
             } else {
                 session[key] = getIndex(context, sessionId) + 1
             }
@@ -282,6 +282,6 @@ class ImageViewModel: ViewModel() {
 
     suspend fun getIndex(context: Context, sessionId: UByte): Int {
         val key = intPreferencesKey("session_index_image_$sessionId")
-        return context.dataStore.data.first()[key]!!
+        return context.dataStore.data.first()[key] ?: 0
     }
 }

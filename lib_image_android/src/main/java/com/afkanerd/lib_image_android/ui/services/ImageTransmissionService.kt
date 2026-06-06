@@ -153,7 +153,6 @@ class ImageTransmissionService : Service() {
                 .getPayloadCache(applicationContext, sessionId)
             runtimeExecution?.invoke(payload!!)
 
-            imageViewModel.incrementIndex(applicationContext, sessionId)
             val notification = createForegroundNotification(
                 intent,
                 icon = icon,
