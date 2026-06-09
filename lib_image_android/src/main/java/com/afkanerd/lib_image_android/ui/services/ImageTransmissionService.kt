@@ -36,7 +36,7 @@ import kotlin.jvm.java
 class ImageTransmissionService : Service() {
     lateinit var workManager: WorkManager
     val imageViewModel = ImageViewModel()
-    private lateinit var messageStateChangedBroadcast: BroadcastReceiver
+    var messageStateChangedBroadcast: BroadcastReceiver? = null
     private var notificationId: Int = -1
 
     private lateinit var notificationManager: NotificationManager
@@ -102,9 +102,6 @@ class ImageTransmissionService : Service() {
                         }
                         WorkInfo.State.CANCELLED,
                         WorkInfo.State.SUCCEEDED -> {
-//                            if(::messageStateChangedBroadcast.isInitialized) {
-//                                unregisterReceiver(messageStateChangedBroadcast)
-//                            }
                             stopSelf()
                             stopForeground(STOP_FOREGROUND_REMOVE)
                         }
@@ -128,7 +125,7 @@ class ImageTransmissionService : Service() {
         val workId = intent.getStringExtra(SmsWorkManager.ITP_WORK_MANAGER_UUID)
 
         // This is the continuation
-        if(!::messageStateChangedBroadcast.isInitialized) {
+        if(messageStateChangedBroadcast == null) {
             handleBroadcast(
                 icon = icon,
                 notificationFilters = notificationFilters
@@ -324,19 +321,20 @@ class ImageTransmissionService : Service() {
                         val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
 
                         var isRetry = false
+                        var payload = imageViewModel
+                            .getPayloadCache(applicationContext, sessionId)
+                        if (payload.isNullOrEmpty()) {
+                            sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            stopSelf()
+                            return@launch
+                        }
 
                         when(resultCode) {
                             Activity.RESULT_OK -> {
                                 imageViewModel.popPayloadCache(applicationContext, sessionId)
 
                                 imageViewModel.incrementIndex(applicationContext, sessionId)
-
-                                val payload = imageViewModel
-                                    .getPayloadCache(applicationContext, sessionId)
-                                if (payload.isNullOrEmpty()) {
-                                    sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
-                                    return@launch
-                                }
 
                                 Thread.sleep((5..10).random() * 1000L)
 
@@ -348,6 +346,15 @@ class ImageTransmissionService : Service() {
                                     else -> {}
                                 }
                             } else -> isRetry = true
+                        }
+
+                        payload = imageViewModel.getPayloadCache(applicationContext, sessionId)
+
+                        if(payload.isNullOrEmpty()) {
+                            imageViewModel.clearPayload(context, sessionId)
+                            stopForeground(STOP_FOREGROUND_REMOVE)
+                            stopSelf()
+                            return@launch
                         }
 
                         val notification = createForegroundNotification(
@@ -374,9 +381,10 @@ class ImageTransmissionService : Service() {
     }
 
     override fun onDestroy() {
-        if(::messageStateChangedBroadcast.isInitialized) {
+        if(messageStateChangedBroadcast != null) {
             try {
                 unregisterReceiver(messageStateChangedBroadcast)
+                messageStateChangedBroadcast = null
             } catch (e: Exception) {
                 e.printStackTrace()
             }

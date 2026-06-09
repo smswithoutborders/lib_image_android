@@ -72,12 +72,19 @@ class SmsWorkManager(
     private lateinit var completedSendingBroadcast: BroadcastReceiver
     private lateinit var retrySendingBroadcast: BroadcastReceiver
     fun registerReceivers( cont: CancellableContinuation<Result>) {
+        val imageViewModel = ImageViewModel()
+
         val filter = IntentFilter(ITP_SERVICE_COMPLETION)
         completedSendingBroadcast = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 try {
                     applicationContext.unregisterReceiver(this)
-                    cont.resume(Result.success())
+                    applicationContext.unregisterReceiver(retrySendingBroadcast)
+                    CoroutineScope(Dispatchers.Default).launch {
+                        val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
+                        imageViewModel.clearPayload(applicationContext, sessionId)
+                        cont.resume(Result.success())
+                    }
                 } catch(e: Exception) {
                     e.printStackTrace()
                 }
@@ -95,6 +102,7 @@ class SmsWorkManager(
             override fun onReceive(context: Context?, intent: Intent?) {
                 try {
                     applicationContext.unregisterReceiver(this)
+                    applicationContext.unregisterReceiver(completedSendingBroadcast)
                     cont.resume(Result.retry())
                 } catch (e: Exception) {
                     e.printStackTrace()

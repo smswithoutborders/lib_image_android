@@ -284,4 +284,38 @@ class ImageViewModel: ViewModel() {
         val key = intPreferencesKey("session_index_image_$sessionId")
         return context.dataStore.data.first()[key] ?: 0
     }
+
+    private suspend fun removeIndex(context: Context, sessionId: UByte) {
+        val key = intPreferencesKey("session_index_image_$sessionId")
+        context.dataStore.edit { session ->
+            session.remove(key)
+        }
+    }
+
+    private suspend fun removePayloadCacheInfo(
+        context: Context,
+        sessionId: UByte,
+    ) {
+        val key = intPreferencesKey("session_payload_info_$sessionId")
+        context.dataStore.edit { session ->
+            session.remove(key)
+        }
+    }
+
+    private suspend fun removePayloadCache(
+        context: Context,
+        sessionId: UByte,
+    ) {
+        removePayloadCacheInfo(context, sessionId)
+        val key = stringSetPreferencesKey("session_payload_$sessionId")
+        context.dataStore.edit { session ->
+            session.remove(key)
+        }
+    }
+
+    suspend fun clearPayload(context: Context, sessionId: UByte) {
+        removePayloadCache(context, sessionId)
+        removeIndex(context, sessionId)
+        removePayloadCacheInfo(context, sessionId)
+    }
 }
