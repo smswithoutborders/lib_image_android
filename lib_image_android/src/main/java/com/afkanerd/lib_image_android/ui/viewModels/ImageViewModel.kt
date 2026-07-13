@@ -277,7 +277,7 @@ class ImageViewModel: ViewModel() {
         context.dataStore.edit { session ->
             val currentSession = session[key]
             if(currentSession == null) {
-                session[key] = 0
+                session[key] = 1
             } else {
                 session[key] = getIndex(context, sessionId) + 1
             }
