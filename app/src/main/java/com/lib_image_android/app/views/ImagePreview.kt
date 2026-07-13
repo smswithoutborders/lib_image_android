@@ -81,7 +81,8 @@ fun ImagePreview(
         if (isGranted) {
             imageViewModel.startWorkManager(
                 context = context,
-                payload = processedImage?.rawBytes!!.chunked(140),
+//                payload = processedImage?.rawBytes!!.chunked(140),
+                payload = listOf("1", "2", "3", "4", "5", "6"),
                 notificationFilter = notificationFilter
             )
         } else {
@@ -112,7 +113,8 @@ fun ImagePreview(
                         } else {
                             imageViewModel.startWorkManager(
                                 context = context,
-                                payload = processedImage?.rawBytes!!.chunked(140),
+//                                payload = processedImage?.rawBytes!!.chunked(140),
+                                payload = listOf("1", "2", "3", "4", "5", "6"),
                                 notificationFilter = notificationFilter
                             )
                         }

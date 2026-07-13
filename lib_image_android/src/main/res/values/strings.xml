@@ -37,4 +37,7 @@
     <string name="message_failed_notifications_descriptions">Get notifications when messages fail</string>
     <string name="bytes">%1$d B</string>
     <string name="sending_content">[%1$d] Sending content...</string>
+    <string name="preparing_for_transmission">Preparing for transmission...</string>
+    <string name="your_attachment_would_begin_sending_soon">Your attachment would begin sending soon</string>
+    <string name="attachment_transmission">Attachment transmission</string>
 </resources>

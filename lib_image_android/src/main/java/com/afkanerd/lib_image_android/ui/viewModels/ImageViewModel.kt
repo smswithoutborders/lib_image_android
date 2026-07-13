@@ -23,11 +23,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import androidx.core.graphics.scale
+import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewModelScope
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -43,7 +46,6 @@ import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.extensions.toBitmap
 import com.afkanerd.lib_image_android.ui.extensions.toLittleEndianBytes
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
-import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +58,8 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "itp_sessions")
 class ImageViewModel: ViewModel() {
     private val STANDARD_SEGMENT_SIZE = 153
     private val STANDARD_ENCODED_HEADER_SIZE = 12
@@ -273,7 +277,7 @@ class ImageViewModel: ViewModel() {
         context.dataStore.edit { session ->
             val currentSession = session[key]
             if(currentSession == null) {
-                session[key] = 1
+                session[key] = 0
             } else {
                 session[key] = getIndex(context, sessionId) + 1
             }
