@@ -1,32 +1,17 @@
 package com.afkanerd.lib_image_android.ui.viewModels
 
-import android.R.attr.bitmap
-import android.R.attr.height
-import android.R.attr.version
-import android.content.ComponentName
 import android.content.Context
-import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
-import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.os.IBinder
 import android.provider.MediaStore
-import android.telephony.SmsManager
-import android.util.Base64
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import java.io.ByteArrayOutputStream
 import androidx.core.graphics.scale
 import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -40,30 +25,22 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
-import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.data.ImageTransmissionNotification
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.extensions.toBitmap
-import com.afkanerd.lib_image_android.ui.extensions.toLittleEndianBytes
-import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "itp_sessions")
 class ImageViewModel: ViewModel() {
-    private val STANDARD_SEGMENT_SIZE = 153
-    private val STANDARD_ENCODED_HEADER_SIZE = 12
-
     @Serializable
     data class ProcessedImage(
         @Transient
@@ -110,6 +87,12 @@ class ImageViewModel: ViewModel() {
         _processingImageUiState.value = false
     }
 
+    private var smsCounterCallback: ((payloadSize: Int) -> Int)? = null
+
+    fun attachmentCounterCallback(smsCounterCallback: (payloadSize: Int) -> Int) {
+        this.smsCounterCallback = smsCounterCallback
+    }
+
     fun setUri(context: Context, value: Uri) {
         uri = value
         compressImage(context)
@@ -125,7 +108,7 @@ class ImageViewModel: ViewModel() {
         compressImage(context)
     }
 
-    private fun compressImage(context: Context) {
+    private fun compressImage( context: Context, ) {
         _processingImageUiState.value = true
         viewModelScope.launch(Dispatchers.Default) {
             val compressFormat: CompressFormat = if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
@@ -156,7 +139,12 @@ class ImageViewModel: ViewModel() {
                     format = compressFormat.name
                 )
             }
-            _smsCount.value = 0
+
+            // Does not to send the contents, just the size in emptied bytes
+            val payloadSize = _processedImage.value?.rawBytes?.size ?: 0
+            smsCounterCallback?.let {
+                _smsCount.value = smsCounterCallback!!.invoke(payloadSize)
+            }
             _size.value = byteArrayOutputStream.size()
             _processingImageUiState.value = false
         }

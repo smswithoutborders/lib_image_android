@@ -1,15 +1,6 @@
 package com.afkanerd.lib_image_android.ui
 
-import android.R.attr.bitmap
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.telephony.SmsManager
-import android.util.Base64
-import android.widget.ImageView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
@@ -51,7 +42,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,21 +63,8 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
-import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 
-fun ByteArray.chunked(size: Int): List<String> {
-    require(size > 0) { "Size must be greater than 0." }
-    return (0 until this.size step size).map { startIndex ->
-        val endIndex = minOf(startIndex + size, this.size)
-        Base64.encodeToString(
-            this.copyOfRange(startIndex, endIndex),
-            Base64.DEFAULT
-        )
-    }
-}
 
 /**
  * imageViewModel: Used to manage the image states.
@@ -101,16 +78,18 @@ fun ImageRender(
     navController: NavController,
     imageViewModel: ImageViewModel,
     uri: Uri? = null,
-    maxNumberSms: Int = 64,
-    smsCountPaddingValue: Int = 0,
-    imageService: ImageTransmissionService,
-    onApplyCallback: () -> Unit,
+    attachmentCounterCallback: (payloadSize: Int) -> Int,
     backActionCallback: () -> Unit = { navController.popBackStack() },
+    onApplyCallback: () -> Unit,
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
     if(uri != null) {
         imageViewModel.setUri(context, uri)
+    }
+
+    LaunchedEffect(attachmentCounterCallback) {
+        imageViewModel.attachmentCounterCallback(attachmentCounterCallback)
     }
 
     val processing by imageViewModel.processingImageUiState.collectAsState()
@@ -124,7 +103,6 @@ fun ImageRender(
 
     val qualityRatio by imageViewModel.qualityRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
-    val scope = rememberCoroutineScope()
 
     BackHandler {
         navController.popBackStack()
@@ -405,7 +383,7 @@ fun ImageMainView() {
         navController = rememberNavController(),
         imageViewModel = remember { ImageViewModel() },
         uri = uri,
+        attachmentCounterCallback = { 0 },
         onApplyCallback = {},
-        imageService = ImageTransmissionService()
     )
 }
