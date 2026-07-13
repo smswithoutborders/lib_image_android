@@ -97,6 +97,7 @@ fun ImageRender(
 
     val smsCount by imageViewModel.smsCount.collectAsState()
     val size by imageViewModel.size.collectAsState()
+    val lowerBoundRange by imageViewModel.lowerBoundRange.collectAsState()
 
     var showQualitySlider by remember{ mutableStateOf(false ) }
     var showResizeSlider by remember{ mutableStateOf(false ) }
@@ -223,7 +224,7 @@ fun ImageRender(
                         ) {
                             SliderImplementation(
                                 stringResource(R.string.quality),
-                                qualityRatio,
+                                sliderPosition = qualityRatio,
                             ) {
                                 imageViewModel.setQuality(context, it)
                             }
@@ -263,7 +264,8 @@ fun ImageRender(
                             Column {
                                 SliderImplementation(
                                     stringResource(R.string.size),
-                                    resizeRatio
+                                    valueRangeUpper = lowerBoundRange,
+                                    sliderPosition = resizeRatio
                                 ) {
                                     imageViewModel.setResizeRatio(context,it)
                                 }
@@ -319,6 +321,7 @@ fun ImageInfo(
 @Composable
 fun SliderImplementation(
     label: String = "",
+    valueRangeUpper: Float = 100f,
     sliderPosition: Float = 100f,
     sliderFinishedChangedCallback: (Float) -> Unit = {},
 ) {
@@ -344,8 +347,8 @@ fun SliderImplementation(
 //                        .background(MaterialTheme.colorScheme.primary, CircleShape),
 //                )
 //            },
-            steps = 100,
-            valueRange = 0f..100f
+            steps = 10,
+            valueRange = 0f..valueRangeUpper
         )
 
         Spacer(Modifier.padding(4.dp))
@@ -353,6 +356,7 @@ fun SliderImplementation(
         OutlinedTextField(
             value = textValue,
             singleLine = true,
+            enabled = false,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done

@@ -64,6 +64,9 @@ class ImageViewModel: ViewModel() {
     private val _size = MutableStateFlow(0)
     val size: StateFlow<Int> = _size
 
+    private val _lowerBoundRange = MutableStateFlow(0f)
+    val lowerBoundRange: StateFlow<Float> = _lowerBoundRange
+
     private val _operationWorkManagerUiState = MutableStateFlow<Operation?>(null)
     val operationWorkManagerUiState: StateFlow<Operation?> = _operationWorkManagerUiState
 
@@ -94,8 +97,20 @@ class ImageViewModel: ViewModel() {
     }
 
     fun setUri(context: Context, value: Uri) {
-        uri = value
-        compressImage(context)
+        viewModelScope.launch {
+            uri = value
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ImageDecoder.decodeBitmap(
+                    ImageDecoder.createSource(context.contentResolver, uri!!))
+            } else {
+                MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
+            }
+
+            val width = (bitmap.width / _resizeRatio.value).toInt()
+            val height = (bitmap.height / _resizeRatio.value).toInt()
+            _lowerBoundRange.value = (if(width > height) width else height) / 16f // why later
+            compressImage(context)
+        }
     }
 
     fun setQuality(context: Context, value: Float) {
