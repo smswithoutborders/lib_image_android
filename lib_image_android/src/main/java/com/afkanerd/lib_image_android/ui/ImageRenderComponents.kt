@@ -1,16 +1,6 @@
 package com.afkanerd.lib_image_android.ui
 
-import android.R.attr.bitmap
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
-import android.telephony.SmsManager
-import android.util.Base64
-import android.widget.ImageView
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +41,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,24 +59,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
-import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 
-fun ByteArray.chunked(size: Int): List<String> {
-    require(size > 0) { "Size must be greater than 0." }
-    return (0 until this.size step size).map { startIndex ->
-        val endIndex = minOf(startIndex + size, this.size)
-        Base64.encodeToString(
-            this.copyOfRange(startIndex, endIndex),
-            Base64.DEFAULT
-        )
-    }
-}
 
 /**
  * imageViewModel: Used to manage the image states.
@@ -98,14 +72,11 @@ fun ByteArray.chunked(size: Int): List<String> {
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ImageRender(
-    navController: NavController,
     imageViewModel: ImageViewModel,
     uri: Uri? = null,
-    maxNumberSms: Int = 64,
-    smsCountPaddingValue: Int = 0,
-    imageService: ImageTransmissionService,
+    attachmentCounterCallback: (payloadSize: Int) -> Int,
+    backActionCallback: () -> Unit = {},
     onApplyCallback: () -> Unit,
-    backActionCallback: () -> Unit = { navController.popBackStack() },
 ) {
     val context = LocalContext.current
     val inPreviewMode = LocalInspectionMode.current
@@ -113,22 +84,22 @@ fun ImageRender(
         imageViewModel.setUri(context, uri)
     }
 
+    LaunchedEffect(attachmentCounterCallback) {
+        imageViewModel.attachmentCounterCallback(attachmentCounterCallback)
+    }
+
     val processing by imageViewModel.processingImageUiState.collectAsState()
     val processedImage by imageViewModel.processedImage.collectAsState()
 
     val smsCount by imageViewModel.smsCount.collectAsState()
     val size by imageViewModel.size.collectAsState()
+    val lowerBoundRange by imageViewModel.lowerBoundRange.collectAsState()
 
     var showQualitySlider by remember{ mutableStateOf(false ) }
     var showResizeSlider by remember{ mutableStateOf(false ) }
 
     val qualityRatio by imageViewModel.qualityRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    BackHandler {
-        navController.popBackStack()
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -245,7 +216,7 @@ fun ImageRender(
                         ) {
                             SliderImplementation(
                                 stringResource(R.string.quality),
-                                qualityRatio,
+                                sliderPosition = qualityRatio,
                             ) {
                                 imageViewModel.setQuality(context, it)
                             }
@@ -285,7 +256,8 @@ fun ImageRender(
                             Column {
                                 SliderImplementation(
                                     stringResource(R.string.size),
-                                    resizeRatio
+                                    valueRangeUpper = lowerBoundRange,
+                                    sliderPosition = resizeRatio
                                 ) {
                                     imageViewModel.setResizeRatio(context,it)
                                 }
@@ -341,6 +313,7 @@ fun ImageInfo(
 @Composable
 fun SliderImplementation(
     label: String = "",
+    valueRangeUpper: Float = 100f,
     sliderPosition: Float = 100f,
     sliderFinishedChangedCallback: (Float) -> Unit = {},
 ) {
@@ -366,8 +339,8 @@ fun SliderImplementation(
 //                        .background(MaterialTheme.colorScheme.primary, CircleShape),
 //                )
 //            },
-            steps = 100,
-            valueRange = 0f..100f
+            steps = 10,
+            valueRange = 0f..valueRangeUpper
         )
 
         Spacer(Modifier.padding(4.dp))
@@ -375,6 +348,7 @@ fun SliderImplementation(
         OutlinedTextField(
             value = textValue,
             singleLine = true,
+            enabled = false,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done
@@ -402,10 +376,9 @@ fun ImageMainView() {
     val context = LocalContext.current
     val uri = "android.resource://${context.packageName}/${R.drawable._0241226_124819}".toUri()
     ImageRender(
-        navController = rememberNavController(),
         imageViewModel = remember { ImageViewModel() },
         uri = uri,
+        attachmentCounterCallback = { 0 },
         onApplyCallback = {},
-        imageService = ImageTransmissionService()
     )
 }

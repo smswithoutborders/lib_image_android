@@ -1,5 +1,6 @@
 package com.afkanerd.lib_image_android.ui.services
 
+import android.R.attr.description
 import android.app.Activity
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -13,6 +14,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat.stopForeground
 import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -25,7 +27,6 @@ import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.data.SmsWorkManager
 import com.afkanerd.lib_image_android.ui.receivers.NotificationActionImpl
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import com.afkanerd.smswithoutborders_libsmsmms.data.dataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -38,6 +39,7 @@ class ImageTransmissionService : Service() {
     val imageViewModel = ImageViewModel()
     var messageStateChangedBroadcast: BroadcastReceiver? = null
     private var notificationId: Int = -1
+    private var icon: Int = -1
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var workState: WorkInfo.State
@@ -74,41 +76,39 @@ class ImageTransmissionService : Service() {
         as NotificationManager
         notificationId = getString(
             R.string.foreground_service_image_transmission_notification_id).toInt()
+
     }
 
-    private fun workflowWatch(
+    private suspend fun workflowWatch(
         intent: Intent,
         workId: String?,
-        icon: Int,
     ) {
-        CoroutineScope(Dispatchers.Default).launch {
-            workManager.getWorkInfoByIdFlow(UUID.fromString(workId))
-                .collect { workInfo ->
-                    workState = workInfo!!.state
-                    val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
+        workManager.getWorkInfoByIdFlow(UUID.fromString(workId))
+            .collect { workInfo ->
+                workState = workInfo!!.state
+                val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
 
-                    when(workInfo.state) {
-                        WorkInfo.State.ENQUEUED -> {
-                            val notification = createForegroundNotification(
-                                intent,
-                                icon = icon,
-                                progress = imageViewModel.getIndex(applicationContext, sessionId),
-                                maxProgress = payloadSize,
-                                isQueue = true,
-                                sessionId = sessionId
-                            ).notification
+                when(workInfo.state) {
+                    WorkInfo.State.ENQUEUED -> {
+                        val notification = createForegroundNotification(
+                            intent,
+                            icon = icon,
+                            progress = imageViewModel.getIndex(applicationContext, sessionId),
+                            maxProgress = payloadSize,
+                            isQueue = true,
+                            sessionId = sessionId
+                        ).notification
 
-                            notificationManager.notify(notificationId, notification)
-                        }
-                        WorkInfo.State.CANCELLED,
-                        WorkInfo.State.SUCCEEDED -> {
-                            stopSelf()
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                        }
-                        else -> {}
+                        notificationManager.notify(notificationId, notification)
                     }
+                    WorkInfo.State.CANCELLED,
+                    WorkInfo.State.SUCCEEDED -> {
+                        stopSelf()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    }
+                    else -> {}
                 }
-        }
+            }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -117,7 +117,15 @@ class ImageTransmissionService : Service() {
             return START_NOT_STICKY
         }
 
-        val icon = intent.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
+        icon = intent.getIntExtra(SmsWorkManager.ITP_SERVICE_ICON, -1)
+
+        val notification = createStartingNotification(
+            intent,
+            icon = icon,
+        ).notification
+
+        startForeground(notificationId, notification)
+
         val notificationFilters = intent
             .getStringExtra(SmsWorkManager.ITP_NOTIFICATION_FILTER) ?:
             throw Exception("Failed to find ${SmsWorkManager.ITP_NOTIFICATION_FILTER}")
@@ -126,16 +134,15 @@ class ImageTransmissionService : Service() {
 
         // This is the continuation
         if(messageStateChangedBroadcast == null) {
-            handleBroadcast(
-                icon = icon,
-                notificationFilters = notificationFilters
+            handleBroadcast(notificationFilters = notificationFilters)
+        }
+
+        CoroutineScope(Dispatchers.Default).launch {
+            workflowWatch(
+                intent = intent,
+                workId = workId,
             )
         }
-        workflowWatch(
-            intent = intent,
-            workId = workId,
-            icon = icon
-        )
 
         CoroutineScope(Dispatchers.Default).launch {
             val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
@@ -145,21 +152,9 @@ class ImageTransmissionService : Service() {
                 return@launch
             }
             payloadSize = info
-
-            val payload = imageViewModel
-                .getPayloadCache(applicationContext, sessionId)
-            runtimeExecution?.invoke(payload!!)
-
-            val notification = createForegroundNotification(
-                intent,
-                icon = icon,
-                progress = imageViewModel.getIndex(applicationContext, sessionId),
-                maxProgress = payloadSize,
-                sessionId = sessionId
-            ).notification
-
-            startForeground(notificationId, notification)
+            executePayload(intent, sessionId, false)
         }
+
         return START_STICKY
     }
 
@@ -209,6 +204,45 @@ class ImageTransmissionService : Service() {
                     }
                 }
             }
+
+        val notification = builder.build()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                notificationId,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(
+                notificationId,
+                notification
+            )
+        }
+    }
+
+    private fun createStartingNotification(
+        intent: Intent,
+        icon: Int,
+    ): ForegroundInfo {
+        val icon = if(icon == -1) R.drawable.ic_launcher_foreground else icon
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = getString(R.string.preparing_for_transmission)
+
+        val description = getString(R.string.your_attachment_would_begin_sending_soon)
+
+        val builder = NotificationCompat.Builder(
+            applicationContext,
+            getString(R.string.foreground_service_image_transmission_channel_id))
+            .setContentTitle(title)
+            .setContentText(description)
+            .setSmallIcon(icon)
+            .setContentIntent(pendingIntent)
 
         val notification = builder.build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -305,10 +339,7 @@ class ImageTransmissionService : Service() {
     /**
      * This is an indicator for iterating through the transmissions
      */
-    private fun handleBroadcast(
-        icon: Int,
-        notificationFilters: String,
-    ) {
+    private fun handleBroadcast(notificationFilters: String,) {
         val intentFilter = IntentFilter()
         intentFilter.addAction(notificationFilters)
         messageStateChangedBroadcast = object : BroadcastReceiver() {
@@ -320,53 +351,19 @@ class ImageTransmissionService : Service() {
                     CoroutineScope(Dispatchers.Default).launch {
                         val sessionId = imageViewModel.getCurrentSessionId(applicationContext)
 
-                        var isRetry = false
-                        var payload = imageViewModel
-                            .getPayloadCache(applicationContext, sessionId)
-                        if (payload.isNullOrEmpty()) {
-                            sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                            stopSelf()
-                            return@launch
-                        }
-
                         when(resultCode) {
                             Activity.RESULT_OK -> {
                                 imageViewModel.popPayloadCache(applicationContext, sessionId)
-
                                 imageViewModel.incrementIndex(applicationContext, sessionId)
 
                                 Thread.sleep((5..10).random() * 1000L)
-
                                 when (workState) {
-                                    WorkInfo.State.ENQUEUED,
-                                    WorkInfo.State.RUNNING -> {
-                                        runtimeExecution?.invoke(payload)
-                                    }
+                                    WorkInfo.State.RUNNING ->
+                                        executePayload(intent, sessionId, false)
                                     else -> {}
                                 }
-                            } else -> isRetry = true
+                            } else -> executePayload(intent, sessionId, true)
                         }
-
-                        payload = imageViewModel.getPayloadCache(applicationContext, sessionId)
-
-                        if(payload.isNullOrEmpty()) {
-                            imageViewModel.clearPayload(context, sessionId)
-                            stopForeground(STOP_FOREGROUND_REMOVE)
-                            stopSelf()
-                            return@launch
-                        }
-
-                        val notification = createForegroundNotification(
-                            intent,
-                            icon = icon,
-                            progress = imageViewModel.getIndex(applicationContext, sessionId),
-                            maxProgress = payloadSize,
-                            isRetry = isRetry,
-                            sessionId = sessionId
-                        ).notification
-
-                        notificationManager.notify(notificationId, notification)
                     }
                 }
             }
@@ -378,6 +375,33 @@ class ImageTransmissionService : Service() {
             intentFilter,
             ContextCompat.RECEIVER_EXPORTED
         )
+    }
+
+    private suspend fun executePayload(
+        intent: Intent,
+        sessionId: UByte,
+        isRetry: Boolean,
+    ) {
+        val payload = imageViewModel.getPayloadCache(applicationContext, sessionId)
+        if (payload.isNullOrEmpty()) {
+            sendBroadcast(Intent(SmsWorkManager.ITP_SERVICE_COMPLETION))
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
+
+        runtimeExecution?.invoke(payload)
+
+        val notification = createForegroundNotification(
+            intent,
+            icon = icon,
+            progress = imageViewModel.getIndex(applicationContext, sessionId),
+            maxProgress = payloadSize,
+            sessionId = sessionId,
+            isRetry = isRetry
+        ).notification
+
+        notificationManager.notify(notificationId, notification)
     }
 
     override fun onDestroy() {

@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
-import com.afkanerd.lib_image_android.ui.chunked
 import com.afkanerd.lib_image_android.ui.navigation.ImageRenderNav
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
@@ -81,7 +80,8 @@ fun ImagePreview(
         if (isGranted) {
             imageViewModel.startWorkManager(
                 context = context,
-                payload = processedImage?.rawBytes!!.chunked(140),
+//                payload = processedImage?.rawBytes!!.chunked(140),
+                payload = listOf("1", "2", "3", "4", "5", "6"),
                 notificationFilter = notificationFilter
             )
         } else {
@@ -112,7 +112,8 @@ fun ImagePreview(
                         } else {
                             imageViewModel.startWorkManager(
                                 context = context,
-                                payload = processedImage?.rawBytes!!.chunked(140),
+//                                payload = processedImage?.rawBytes!!.chunked(140),
+                                payload = listOf("1", "2", "3", "4", "5", "6"),
                                 notificationFilter = notificationFilter
                             )
                         }

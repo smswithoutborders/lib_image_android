@@ -21,6 +21,7 @@ import com.lib_image_android.app.navigation.ImageRenderHomeNav
 import com.lib_image_android.app.theme.Lib_image_androidTheme
 import com.lib_image_android.app.views.ImageMainView
 import com.lib_image_android.app.views.ImagePreview
+import kotlin.io.encoding.Base64
 
 class MainActivity : BindActivity() {
     lateinit var navController: NavHostController
@@ -56,10 +57,11 @@ class MainActivity : BindActivity() {
                     composable<ImageRenderNav>{ backEntry ->
                         val imageRenderNav: ImageRenderNav = backEntry.toRoute()
                         ImageRender(
-                            navController = navController,
                             imageViewModel = imageViewModel,
                             uri = imageRenderNav.uri?.toUri(),
-                            imageService = imageTransmissionService,
+                            attachmentCounterCallback = { size ->
+                                (size + 16) / 160
+                            },
                             onApplyCallback = {
                                 navController.navigate(ImagePreviewNav) {
                                     popUpTo(navController.graph.startDestinationId) {

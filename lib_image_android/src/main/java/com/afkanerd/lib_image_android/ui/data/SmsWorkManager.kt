@@ -15,7 +15,6 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.afkanerd.lib_image_android.ui.services.ImageTransmissionService
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
-import com.afkanerd.smswithoutborders_libsmsmms.data.ImageTransmissionProtocol
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
