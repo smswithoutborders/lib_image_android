@@ -1,7 +1,6 @@
 package com.afkanerd.lib_image_android.ui
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -60,8 +59,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.afkanerd.lib_image_android.R
 import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 
@@ -75,11 +72,10 @@ import com.afkanerd.lib_image_android.ui.viewModels.ImageViewModel
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ImageRender(
-    navController: NavController,
     imageViewModel: ImageViewModel,
     uri: Uri? = null,
     attachmentCounterCallback: (payloadSize: Int) -> Int,
-    backActionCallback: () -> Unit = { navController.popBackStack() },
+    backActionCallback: () -> Unit = {},
     onApplyCallback: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -104,10 +100,6 @@ fun ImageRender(
 
     val qualityRatio by imageViewModel.qualityRatio.collectAsState()
     val resizeRatio by imageViewModel.resizeRatio.collectAsState()
-
-    BackHandler {
-        navController.popBackStack()
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -384,7 +376,6 @@ fun ImageMainView() {
     val context = LocalContext.current
     val uri = "android.resource://${context.packageName}/${R.drawable._0241226_124819}".toUri()
     ImageRender(
-        navController = rememberNavController(),
         imageViewModel = remember { ImageViewModel() },
         uri = uri,
         attachmentCounterCallback = { 0 },
